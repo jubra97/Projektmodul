@@ -1,38 +1,71 @@
 import gym
 import numpy as np
+import json
 
-from stable_baselines.ddpg.policies import MlpPolicy
-from stable_baselines.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise, AdaptiveParamNoiseSpec
-from stable_baselines import DDPG
-import gym_test
-
+from stable_baselines3.ddpg.policies import MlpPolicy
+from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
+from stable_baselines3 import DDPG, TD3
+import SimulationEnvs
+from tensorboard_logger import TensorboardCallback
+import matplotlib.pyplot as plt
 
 # create DmsSim Gym Env
-env = gym_test.DmsSim()
+env = SimulationEnvs.FullAdaptivePT2()
 
 # use action and param noise?
 n_actions = env.action_space.shape[-1]
-param_noise = None
-action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=float(0.5) * np.ones(n_actions))
-
-# use DDPG and create a tensorboard
-# start tensorboard server with tensorboard --logdir ./dmsSim_ddpg_tensorboard/
-model = DDPG(MlpPolicy, env, verbose=1, param_noise=param_noise, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/")
-model.learn(total_timesteps=2000)
-
-# save model if you want to
-# model.save("dms_ddpg")
+# n_actions = 2
+action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=float(0.25) * np.ones(n_actions))
+# noise = []
+# noise2 = []
+# for i in range(10000):
+#     # if i % 250 == 0:
+#     #     action_noise.reset()
+#     noise.append(action_noise())
+# noise = np.array(noise)
+# noise2 = np.array(noise2)
+# plt.plot(noise)
+# plt.show()
+# # use DDPG and create a tensorboard
+# # start tensorboard server with tensorboard --logdir ./dmsSim_ddpg_tensorboard/
+# policy_kwargs = dict(net_arch=[10, 10])
+# # model = DDPG(MlpPolicy, env, verbose=1, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/", policy_kwargs=policy_kwargs)
 #
-# del model # remove to demonstrate saving and loading
+model = TD3("MlpPolicy", env, verbose=0, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/")#, policy_kwargs=policy_kwargs)
+model.learn(total_timesteps=5000, tb_log_name="first_run", callback=TensorboardCallback(env))
+# # #
+# # # # save model if you want to
+# # model.save("dms_ddpg_sum")
+# # #
+# # del model # remove to demonstrate saving and loading
+#
+# # load model if you want to
+# # model = DDPG.load("secound_working_try")
+#
+# # simulate solutions
+# plt.plot(np.array(env.rewards_log), label="Rewards")
+# # plt.plot(np.array(env.actions_log), label="Actions")
+# # plt.plot(np.array(env.observations_log), label="Observations")
+# plt.plot(np.array(env.dones_log), label="Dones")
+# plt.legend()
+# plt.grid()
+# plt.show()
+save_dict = {"obs:": env.observations_log,
+             "actions:": env.actions_log,
+             "rewards": env.rewards_log,
+             "done": env.dones_log}
+with open("log_data_last_run..json2", "w") as f:
+    json.dump(save_dict, f, indent=4)
 
-# load model if you want to
-# model = DDPG.load("dms_ddpg)
-
-# simulate solutions
 while True:
+    # env.init_render()
     obs = env.reset()
-    print(obs)
-    action, _states = model.predict(obs)
-    print(action)
-    obs, rewards, dones, info = env.step(action)
+    dones = False
+    while dones is not True:
+        action, _states = model.predict(obs)
+        print(f"Action {action}")
+        obs, rewards, dones, info = env.step(action)
+        print(f"Observation: {obs}")
+        print(f"Reward {rewards}")
+
     env.render()
