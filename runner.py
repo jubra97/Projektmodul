@@ -10,12 +10,12 @@ from tensorboard_logger import TensorboardCallback
 import matplotlib.pyplot as plt
 
 # create DmsSim Gym Env
-env = SimulationEnvs.FullAdaptivePT2()
+env = SimulationEnvs.NoControllerAdaptivePT2()
 
 # use action and param noise?
 n_actions = env.action_space.shape[-1]
 # n_actions = 2
-action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=float(0.25) * np.ones(n_actions))
+action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=float(0.0025) * np.ones(n_actions))
 # noise = []
 # noise2 = []
 # for i in range(10000):
@@ -32,7 +32,7 @@ action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=floa
 # # model = DDPG(MlpPolicy, env, verbose=1, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/", policy_kwargs=policy_kwargs)
 #
 model = TD3("MlpPolicy", env, verbose=0, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/")#, policy_kwargs=policy_kwargs)
-model.learn(total_timesteps=5000, tb_log_name="first_run", callback=TensorboardCallback(env))
+model.learn(total_timesteps=100000, tb_log_name="first_run", callback=TensorboardCallback(env))
 # # #
 # # # # save model if you want to
 # # model.save("dms_ddpg_sum")
