@@ -126,7 +126,7 @@ class FullAdaptivePT2(gym.Env):
         Important: the observation must be a numpy array; Return after every step with random step between 0, 2
         :return: (np.array)
         """
-        step_height = random.uniform(4.99, 5)
+        step_height = random.uniform(1, 1)
         u_before_step = [0] * int(0.5 * self.model_sample_frequency)
         u_step = np.linspace(0, step_height, int(0.05 * self.model_sample_frequency)).tolist()
         # u_step = []
@@ -276,7 +276,7 @@ class NoControllerAdaptivePT2(gym.Env):
         Important: the observation must be a numpy array; Return after every step with random step between 0, 2
         :return: (np.array)
         """
-        step_height = random.uniform(4.99, 5)
+        step_height = random.uniform(1, 1)
         u_before_step = [0] * int(0.5 * self.model_sample_frequency)
         u_step = np.linspace(0, step_height, int(0.05 * self.model_sample_frequency)).tolist()
         # u_step = []
