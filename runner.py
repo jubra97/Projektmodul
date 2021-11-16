@@ -6,9 +6,12 @@ from typing import Callable
 from stable_baselines3.ddpg.policies import MlpPolicy
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 from stable_baselines3 import DDPG, TD3
-import SimulationEnvs
+from stable_baselines3.common.callbacks import EvalCallback, CallbackList
+from envs.DirectControllerPT2 import DirectControllerPT2
 from tensorboard_logger import TensorboardCallback
 import matplotlib.pyplot as plt
+from CustomEvalCallback import CustomEvalCallback
+from stable_baselines3.common.monitor import Monitor
 
 
 def linear_schedule(initial_value: float) -> Callable[[float], float]:
@@ -19,6 +22,7 @@ def linear_schedule(initial_value: float) -> Callable[[float], float]:
     :return: schedule that computes
       current learning rate depending on remaining progress
     """
+
     def func(progress_remaining: float) -> float:
         """
         Progress will decrease from 1 (beginning) to 0.
@@ -32,21 +36,31 @@ def linear_schedule(initial_value: float) -> Callable[[float], float]:
 
 
 # create DmsSim Gym Env
-env = SimulationEnvs.NoControllerAdaptivePT2()
+env = DirectControllerPT2()
+env = Monitor(env)
 
-# use action and param noise?
+# create action noise
 n_actions = env.action_space.shape[-1]
-# n_actions = 2
 # action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=float(0.005) * np.ones(n_actions))
 action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.15) * np.ones(n_actions))
 
+# create tensorboard callback
+tb_callback = TensorboardCallback(env)
+
+# create eval callback
+
+eval_callback = CustomEvalCallback(Monitor(DirectControllerPT2(eval_plot_mode=True)), eval_freq=1000, deterministic=True, render=False)
+
+# create callback list
+callbacks = CallbackList([tb_callback, eval_callback])
 
 # # use DDPG and create a tensorboard
 # # start tensorboard server with tensorboard --logdir ./dmsSim_ddpg_tensorboard/
 # policy_kwargs = dict(net_arch=[128, 128])
-model = DDPG(MlpPolicy, env, verbose=0, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/")#, policy_kwargs=policy_kwargs)
+model = DDPG(MlpPolicy, env, verbose=0, action_noise=action_noise,
+             tensorboard_log="./dmsSim_ddpg_tensorboard/")  # , policy_kwargs=policy_kwargs)
 # model = TD3("MlpPolicy", env, verbose=0, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/", batch_size=300, gamma=0.1)#, policy_kwargs=policy_kwargs)
-model.learn(total_timesteps=30000, tb_log_name="first_run", callback=TensorboardCallback(env))
+model.learn(total_timesteps=30000, tb_log_name="first_run", callback=callbacks)
 
 # save model if you want to
 model.save("test_save")
