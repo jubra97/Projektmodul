@@ -5,6 +5,8 @@ import gym
 import matplotlib.pyplot as plt
 import numpy as np
 
+from collections import deque
+
 
 class StepAdaptivePT2(gym.Env):
     def __init__(self, oscillating=False, model_sample_frequency=10_000, simulation_time=1.5):
@@ -196,7 +198,7 @@ class FullAdaptivePT2(gym.Env):
 
         # Optionally we can pass additional info, we are not using that for now
         info = {}
-        reward = 1 - reward
+        # reward = 1 - reward
         # just for logging
         self.actions_log.append([controller_p, controller_i])
         self.rewards_log.append(reward)
@@ -259,9 +261,11 @@ class NoControllerAdaptivePT2(gym.Env):
         self.simulation_time_steps = 0
         self.out = []
         self.integrated_error = 0
+        self.last_gain = 0
+        self.last_errors = deque([0]*5, maxlen=5)
 
-        self.observation_space = gym.spaces.Box(low=np.array([-1000, -1000]), high=np.array([1000, 1000]), shape=(2,), dtype=np.float32)
-        self.action_space = gym.spaces.Box(low=np.array([-0.99]), high=np.array([1]), shape=(1,),
+        self.observation_space = gym.spaces.Box(low=np.array([-100, -100]), high=np.array([100, 100]), shape=(2,), dtype=np.float32)
+        self.action_space = gym.spaces.Box(low=np.array([-10]), high=np.array([10]), shape=(1,),
                                            dtype=np.float32)
 
         # just for logging
@@ -290,15 +294,17 @@ class NoControllerAdaptivePT2(gym.Env):
         self.simulation_time_steps = 0
         self.out = []
         self.integrated_error = 0
+        self.last_gain = 0
+        self.last_errors = deque([0]*5, maxlen=5)
 
-        return np.array(observation).astype(np.float32)
+        return np.array([0, 0]).astype(np.float32)
 
     def step(self, action):
         # get p and i from action
-        action = action * 100
+        action = action[0]
 
         # constant_value until next update
-        reference_value = [action[0]] * (self.model_steps_per_controller_value + 1)
+        reference_value = [self.last_gain + action] * (self.model_steps_per_controller_value + 1)
 
         # simulate one controller update step
         i = self.simulation_time_steps
@@ -337,8 +343,8 @@ class NoControllerAdaptivePT2(gym.Env):
             done = False
             reward = np.mean(np.square(np.array(self.out[i:self.simulation_time_steps-1]) - np.array(self.u[i:self.simulation_time_steps-1])))
             # reward = 1
-        observation = self.out[self.simulation_time_steps - 1] - self.u[self.simulation_time_steps - 1]
-        self.integrated_error += observation * 1/self.controller_sample_frequency
+        error = self.out[self.simulation_time_steps - 1] - self.u[self.simulation_time_steps - 1]
+        self.integrated_error += error * 1/self.controller_sample_frequency
         # except ValueError:
         #     reward = -np.inf
         #     done = True
@@ -348,20 +354,25 @@ class NoControllerAdaptivePT2(gym.Env):
 
         # Optionally we can pass additional info, we are not using that for now
         info = {}
-        reward = 1 - reward
+        reward = 10 - reward - (abs(action))
+
+        self.last_errors.append(error)
+        velocity = self.last_errors[-2] - self.last_errors[-1]
+        # reward = 1 - reward / 10_00
         # just for logging
-        self.actions_log.append(reference_value)
+        self.actions_log.append(reference_value[0])
         self.rewards_log.append(reward)
-        self.observations_log.append([observation, self.integrated_error])
+        self.observations_log.append([error, self.integrated_error])
         self.dones_log.append(done)
-        self.tensorboard_log = {"Obs/Error": observation,
+        self.tensorboard_log = {"Obs/Error": error,
                                 "Obs/Integrated_Error": self.integrated_error,
-                                "Action/Ref": reference_value,
+                                "Obs/Vel": velocity,
+                                "Action": reference_value[0],
                                 "Reward": reward,
                                 "Done": 1 if done else 0}
 
 
-        return np.array([observation, self.integrated_error]).astype(np.float32), reward, done, info
+        return np.array([error, velocity]).astype(np.float32), reward, done, info
 
     def render(self, mode='console'):
         x_points = [x for x in range(0, len(self.t), self.model_steps_per_controller_value)]
