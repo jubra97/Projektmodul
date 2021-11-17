@@ -42,7 +42,7 @@ class CustomEvalCallback(EventCallback):
 
     def __init__(
             self,
-            eval_env: Union[gym.Env, VecEnv],
+            eval_env,
             n_eval_episodes: int = 1,
             eval_freq: int = 10000,
             deterministic: bool = True,
@@ -63,10 +63,66 @@ class CustomEvalCallback(EventCallback):
 
         if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
             # crete eval env
+            print("Start Log")
+            env = self.eval_env()
 
+            ob = env.reset()
+            done = False
+            while done is not True:
+                action, _states = self.model.predict(ob, deterministic=self.deterministic)
+                ob, reward, done, info = env.step(action)
 
-            # dl eval env
+            print(f"Logging Image Call Nr: {self.n_calls}")
+            samples_per_episode = int(env.simulation_time * env.controller_sample_frequency)
+            sim_time = np.linspace(0, env.simulation_time, samples_per_episode)
 
+            fig, ax = plt.subplots(2, 3, figsize=(20, 10))
 
+            # plot obs axes
+            ax[0][0].set_title("Obs")
+            obs = np.array(env.observations_log)
+            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 0], label="Error")
+            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 1], label="Integrated Error")
+            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 2] * 100, label="Derived Error (*100)")
+            ax[0][0].grid()
+            ax[0][0].legend()
+
+            # plt action axes
+            action_data = pd.DataFrame(env.actions_log[-samples_per_episode:]).to_dict(orient="list")
+            ax[0][1].set_title("Action")
+            ax[0][1].plot(sim_time, action_data["reference_value"][-samples_per_episode:], label="Reference Value")
+            ax[0][1].plot(sim_time, action_data["action"][-samples_per_episode:], label="Action")
+            ax[0][1].grid()
+            ax[0][1].legend()
+
+            # go back from list of dicts to dict of lists
+            reward_data = pd.DataFrame(env.rewards_log[-samples_per_episode:]).to_dict(orient="list")
+
+            # plt reward axes
+            ax[1][0].set_title("Reward")
+            ax[1][0].plot(sim_time, reward_data["reward"], label="Reward")
+            ax[1][0].grid()
+            ax[1][0].legend()
+
+            # plt reward shares
+            ax[1][1].set_title("Reward Shares")
+            ax[1][1].plot(sim_time, reward_data["pen_error"], label="Error Share")
+            ax[1][1].plot(sim_time, reward_data["pen_integrated"], label="Integrated Error Share")
+            ax[1][1].plot(sim_time, reward_data["pen_action"], label="Action Share")
+            ax[1][1].grid()
+            ax[1][1].legend()
+
+            # plt u and out
+            ax[0][2].set_title("Function")
+            ax[0][2].plot(env.t, env.u, label="Set Point")
+            ax[0][2].plot(env.t, env.out, label="Output")
+            ax[0][2].grid()
+            ax[0][2].legend()
+
+            fig.tight_layout()
+            self.logger.record("Overview/A", Figure(fig, close=True), exclude=("stdout", "log", "json", "csv"))
+            plt.close()
+
+            del env
 
         return True

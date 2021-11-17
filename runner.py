@@ -4,8 +4,9 @@ import json
 
 from typing import Callable
 from stable_baselines3.ddpg.policies import MlpPolicy
+from stable_baselines3.a2c.policies import ActorCriticPolicy
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
-from stable_baselines3 import DDPG, TD3
+from stable_baselines3 import DDPG, TD3, A2C
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from envs.DirectControllerPT2 import DirectControllerPT2
 from tensorboard_logger import TensorboardCallback
@@ -42,25 +43,25 @@ env = Monitor(env)
 # create action noise
 n_actions = env.action_space.shape[-1]
 # action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=float(0.005) * np.ones(n_actions))
-action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.15) * np.ones(n_actions))
+action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.05) * np.ones(n_actions))
 
 # create tensorboard callback
 tb_callback = TensorboardCallback(env)
 
 # create eval callback
 
-eval_callback = CustomEvalCallback(Monitor(DirectControllerPT2(eval_plot_mode=True)), eval_freq=1000, deterministic=True, render=False)
+eval_callback = CustomEvalCallback(DirectControllerPT2, eval_freq=1500, deterministic=True)
 
 # create callback list
 callbacks = CallbackList([tb_callback, eval_callback])
 
 # # use DDPG and create a tensorboard
 # # start tensorboard server with tensorboard --logdir ./dmsSim_ddpg_tensorboard/
-# policy_kwargs = dict(net_arch=[128, 128])
-model = DDPG(MlpPolicy, env, verbose=0, action_noise=action_noise,
-             tensorboard_log="./dmsSim_ddpg_tensorboard/")  # , policy_kwargs=policy_kwargs)
+policy_kwargs = dict(net_arch=[16, 16])
+model = DDPG(MlpPolicy, env, learning_rate=linear_schedule(1e-3), learning_starts=1500, verbose=0, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/", policy_kwargs=policy_kwargs, batch_size=300, gamma=0.8)
 # model = TD3("MlpPolicy", env, verbose=0, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/", batch_size=300, gamma=0.1)#, policy_kwargs=policy_kwargs)
-model.learn(total_timesteps=30000, tb_log_name="first_run", callback=callbacks)
+# model = A2C(ActorCriticPolicy, env, verbose=0, tensorboard_log="./dmsSim_ddpg_tensorboard/")  # , policy_kwargs=policy_kwargs)
+model.learn(total_timesteps=1500000, tb_log_name="first_run", callback=callbacks)
 
 # save model if you want to
 model.save("test_save")

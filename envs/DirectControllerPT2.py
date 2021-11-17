@@ -82,8 +82,9 @@ class DirectControllerPT2(gym.Env):
         action = action[0] * 10
 
         # constant_value until next update
-        reference_value = [self.last_gain + action] * (self.model_steps_per_controller_value + 1)
-
+        next_reference_value = np.clip(self.last_gain + action, -10, 10)
+        reference_value = [next_reference_value] * (self.model_steps_per_controller_value + 1)
+        self.last_gain = next_reference_value
         # simulate one controller update step
         i = self.simulation_time_steps
         # try:
@@ -121,7 +122,6 @@ class DirectControllerPT2(gym.Env):
             pen_error = np.mean(np.abs(np.array(self.out) - self.u))  # mean error at every time step
             pen_error = np.mean(np.abs(np.array(self.out[i:self.simulation_time_steps - 1]) - np.array(
                 self.u[i:self.simulation_time_steps - 1])))  # mean error over last simulation step
-            print(len(self.out))
             # self.render()
         else:
             done = False
@@ -141,13 +141,15 @@ class DirectControllerPT2(gym.Env):
         info = {}
 
         # create reward
-        pen_action = abs(action)
-        pen_integrated = abs(self.integrated_error)
+        pen_error = pen_error * 1
+        pen_action = abs(action) * 1
+        pen_integrated = abs(self.integrated_error) * 1
         offset = 10
         reward = offset - pen_error - pen_action - pen_integrated
 
         # just for logging
-        self.actions_log.append(reference_value[0])
+        self.actions_log.append({"reference_value": next_reference_value,
+                                 "action": action})
         self.rewards_log.append({"offset": offset,
                                  "reward": reward,
                                  "pen_error": pen_error,
