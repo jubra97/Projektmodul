@@ -1,17 +1,9 @@
-import os
-import warnings
-from typing import Any, Dict, Optional, Union
-
-import gym
+import matplotlib; matplotlib.use("Agg")
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from stable_baselines3.common.callbacks import EventCallback, BaseCallback
 from stable_baselines3.common.logger import Figure
-
-from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, sync_envs_normalization
-
 
 class CustomEvalCallback(EventCallback):
     """

@@ -1,12 +1,10 @@
 import random
+from collections import deque
 
 import control
 import gym
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-from collections import deque
-from stable_baselines3.common.logger import Figure
+
 
 class DirectControllerPT2(gym.Env):
     def __init__(self, oscillating=False, model_sample_frequency=10_000, controller_sample_frequency=100,
@@ -39,7 +37,7 @@ class DirectControllerPT2(gym.Env):
         self.last_gain = 0
         self.last_errors = deque([0] * 5, maxlen=5)
 
-        self.observation_space = gym.spaces.Box(low=np.array([-100, -100, -100]), high=np.array([100, 100, 100]),
+        self.observation_space = gym.spaces.Box(low=np.array([-10, -10, -10]), high=np.array([10, 10, 10]),
                                                 shape=(3,),
                                                 dtype=np.float32)
         self.action_space = gym.spaces.Box(low=np.array([-1]), high=np.array([1]), shape=(1,),
@@ -61,8 +59,8 @@ class DirectControllerPT2(gym.Env):
         # create u (e.g. step)
         step_height = random.uniform(1, 1)
         u_before_step = [0] * int(0.5 * self.model_sample_frequency)
-        # u_step = np.linspace(0, step_height, int(0.05 * self.model_sample_frequency)).tolist()
-        u_step = []
+        u_step = np.linspace(0, step_height, int(0.05 * self.model_sample_frequency)).tolist()
+        # u_step = []
         u_after_step = [step_height] * int(self.n_sample_points - len(u_before_step) - len(u_step))
         self.u = u_before_step + u_step + u_after_step
 
@@ -120,12 +118,12 @@ class DirectControllerPT2(gym.Env):
             self.out = self.out + self.out[-1:]
             done = True
             pen_error = np.mean(np.abs(np.array(self.out) - self.u))  # mean error at every time step
-            pen_error = np.mean(np.abs(np.array(self.out[i:self.simulation_time_steps - 1]) - np.array(
+            pen_error = np.mean(np.square(np.array(self.out[i:self.simulation_time_steps - 1]) - np.array(
                 self.u[i:self.simulation_time_steps - 1])))  # mean error over last simulation step
             # self.render()
         else:
             done = False
-            pen_error = np.mean(np.abs(np.array(self.out[i:self.simulation_time_steps - 1]) - np.array(
+            pen_error = np.mean(np.square(np.array(self.out[i:self.simulation_time_steps - 1]) - np.array(
                 self.u[i:self.simulation_time_steps - 1])))  # mean error over last simulation step
             # reward = 1
 
@@ -142,9 +140,9 @@ class DirectControllerPT2(gym.Env):
 
         # create reward
         pen_error = pen_error * 1
-        pen_action = abs(action) * 1
-        pen_integrated = abs(self.integrated_error) * 1
-        offset = 10
+        pen_action = np.square(action) * 1
+        pen_integrated = np.square(self.integrated_error) * 1
+        offset = 0
         reward = offset - pen_error - pen_action - pen_integrated
 
         # just for logging
@@ -165,8 +163,7 @@ class DirectControllerPT2(gym.Env):
                                 "Reward": reward,
                                 "Done": 1 if done else 0}
 
-
-        return np.array([error, self.integrated_error, derived_error]).astype(np.float32), reward, done, info
+        return np.array([-error, self.integrated_error, derived_error]).astype(np.float32), reward, done, info
 
     def render(self, mode='console'):
         x_points = [x for x in range(0, len(self.t), self.model_steps_per_controller_value)]
