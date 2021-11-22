@@ -1,14 +1,15 @@
 import random
 from collections import deque
-import matplotlib.pyplot as plt
+
 import control
 import gym
+import matplotlib.pyplot as plt
 import numpy as np
 
 
 class DirectControllerPT2(gym.Env):
     def __init__(self, oscillating=False, model_sample_frequency=10_000, controller_sample_frequency=100,
-                 simulation_time=1.5, eval_plot_mode=False, logger=None):
+                 simulation_time=1.5):
         super(DirectControllerPT2, self).__init__()
         if oscillating:
             self.sys = control.tf([1], [0.001, 0.005, 1])
@@ -20,9 +21,7 @@ class DirectControllerPT2(gym.Env):
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111)
         self.first_flag = True
-        self.save_renders = True
-        self.eval_plot_mode = eval_plot_mode
-        self.logger = logger
+
         # set model simulation params
         self.model_sample_frequency = model_sample_frequency
         self.controller_sample_frequency = controller_sample_frequency
@@ -34,11 +33,11 @@ class DirectControllerPT2(gym.Env):
         self.simulation_time_steps = 0
         self.out = []
         self.integrated_error = 0
-        self.last_gain = 0
+        self.last_action = 0
         self.last_errors = deque([0] * 5, maxlen=5)
 
-        self.observation_space = gym.spaces.Box(low=np.array([-20, -20, -20]), high=np.array([20, 20, 20]),
-                                                shape=(3,),
+        self.observation_space = gym.spaces.Box(low=np.array([-100, -1, -100, -100]), high=np.array([100, 1, 100, 100]),
+                                                shape=(4,),
                                                 dtype=np.float32)
         self.action_space = gym.spaces.Box(low=np.array([-1]), high=np.array([1]), shape=(1,),
                                            dtype=np.float32)
@@ -69,97 +68,67 @@ class DirectControllerPT2(gym.Env):
         self.simulation_time_steps = 0
         self.out = []
         self.integrated_error = 0
-        self.last_gain = 0
+        self.last_action = 0
         self.last_errors = deque([0] * 5, maxlen=5)
 
         # initial observation is zero
-        return np.array([0, 0, 0]).astype(np.float32)
+        return np.array([0, 0, 0, 0]).astype(np.float32)
 
     def step(self, action):
-        # set controller output
-        action = action[0] * 50
-
+        action = action[0]
         # constant_value until next update
         # next_reference_value = np.clip(self.last_gain + action, -10, 10)
-        next_reference_value = np.clip(action, -50, 50)
-        reference_value = [next_reference_value] * (self.model_steps_per_controller_value + 1)
-
+        system_input = np.clip(action * 50, -50, 50)
+        system_input_trajectory = [system_input] * (self.model_steps_per_controller_value + 1)
 
         # simulate one controller update step
-        i = self.simulation_time_steps
-        # try:
-        if self.last_state is None:
-
-            sim_time, out_step, self.last_state = control.forced_response(self.sys,
-                                                                          self.t[
-                                                                          i:i + self.model_steps_per_controller_value + 1],
-                                                                          reference_value,
-                                                                          return_x=True)
-        else:
-            try:
-                sim_time, out_step, self.last_state = control.forced_response(self.sys,
-                                                                              self.t[
-                                                                              i:i + self.model_steps_per_controller_value + 1],
-                                                                              reference_value,
-                                                                              X0=self.last_state[:, -1],
-                                                                              return_x=True)
-            except ValueError:
-                sim_time, out_step, self.last_state = control.forced_response(self.sys,
-                                                                              self.t[
-                                                                              i:i + self.model_steps_per_controller_value + 1],
-                                                                              reference_value[:-1],
-                                                                              X0=self.last_state[:, -1],
-                                                                              return_x=True)
-
-        # append simulation step and update simulation time
-        self.out = self.out + out_step.tolist()[:-1]
-        self.simulation_time_steps += self.model_steps_per_controller_value  #
+        start_step = self.simulation_time_steps
+        stop_step = self.simulation_time_steps + self.model_steps_per_controller_value - 1
+        self.sim_one_step(system_input_trajectory, start_step, stop_step+1)
 
         # check if simulation/episode is complete
-        if self.simulation_time_steps >= len(self.t):
-            self.out = self.out + self.out[-1:]
+        if (stop_step + 1) >= len(self.t):
+            self.out = self.out + self.out[-1:]  # add last value to match sim time
             done = True
-            pen_error = np.mean(np.abs(np.array(self.out) - self.u))  # mean error at every time step
-            pen_error = np.mean(np.square(np.array(self.out[i:self.simulation_time_steps - 1]) - np.array(
-                self.u[i:self.simulation_time_steps - 1])))  # mean error over last simulation step
-            # self.render()
         else:
             done = False
-            pen_error = np.mean(np.square(np.array(self.out[i:self.simulation_time_steps - 1]) - np.array(
-                self.u[i:self.simulation_time_steps - 1])))  # mean error over last simulation step
-            # reward = 1
 
-        # error between input and set point and measured value
-        error = self.out[self.simulation_time_steps - 1] - self.u[self.simulation_time_steps - 1]
-        self.last_errors.append(error)  # append to list of last errors
-        # integrate error in current episode
-        self.integrated_error += abs(error) * 1 / self.controller_sample_frequency
+        # create observation with errors
+        # error between system output and set point
+        # error = self.out[stop_step] - self.u[stop_step]
+        # self.last_errors.append(error)  # append to list of last errors
+        # # integrate error in current episode TODO: Use absolute or non absoulte integrated eroor
+        # self.integrated_error += abs(error) * 1 / self.controller_sample_frequency
+        # derived_error = (self.last_errors[-2] - self.last_errors[-1]) / self.controller_sample_frequency
+        # derived_error = derived_error * 100  # for equal scaling of obs
+        # obs = [-error, self.integrated_error, derived_error]
 
-        derived_error = (self.last_errors[-2] - self.last_errors[-1]) / self.controller_sample_frequency
-        derived_error = derived_error * 100  # for equal scaling of obs
-        obs = [-error, self.integrated_error, derived_error]
-
-
-        current_reference_value = self.u[self.simulation_time_steps-1]
-        current_out = self.out[self.simulation_time_steps-1]
-        current_out_dot = (self.out[self.simulation_time_steps-1] - self.out[
-            self.simulation_time_steps - self.model_steps_per_controller_value]) / self.model_steps_per_controller_value * 100
-        obs = [current_reference_value, current_out, current_out_dot]
+        # create observation with system and input state
+        current_set_point = self.u[stop_step]
+        current_system_output = self.out[stop_step]
+        current_system_output_dot = (self.out[stop_step] - self.out[
+            stop_step - self.model_steps_per_controller_value+1]) / self.model_steps_per_controller_value * 100
+        current_system_input = action
+        obs = [current_set_point, current_system_input, current_system_output, current_system_output_dot]
         # Optionally we can pass additional info, we are not using that for now
         info = {}
 
         # create reward
+        pen_error = np.mean(np.abs(np.array(self.out[start_step:stop_step]) - np.array(
+            self.u[start_step:stop_step])))  # mean error over last simulation step
         pen_error = pen_error * 100
-        pen_action = np.square(self.last_gain - next_reference_value - (self.u[self.simulation_time_steps-1]
-                                                                        - self.u[self.simulation_time_steps-self.model_steps_per_controller_value-1])) * 1
+        pen_action = np.square(self.last_action - system_input)
         pen_integrated = np.square(self.integrated_error) * 0
         offset = 0
         reward = offset - pen_error - pen_action - pen_integrated
-        # reward = round(reward, 0)
+
+        # update simulation variables
+        self.simulation_time_steps += self.model_steps_per_controller_value
+        self.last_action = system_input
+
         # just for logging
-        self.last_gain = next_reference_value
-        self.actions_log.append({"reference_value": next_reference_value,
-                                 "action": action})
+        self.actions_log.append({"reference_value": system_input,
+                                 "action": system_input})
         self.rewards_log.append({"offset": offset,
                                  "reward": reward,
                                  "pen_error": pen_error,
@@ -171,13 +140,32 @@ class DirectControllerPT2(gym.Env):
         self.tensorboard_log = {"Obs/RefVal": obs[0],
                                 "Obs/CurrentOut": obs[1],
                                 "Obs/CurrentOutDot": obs[2],
-                                "Obs/Vel": derived_error,
-                                "Action": reference_value[0],
+                                "Action": system_input,
                                 "Reward": reward,
                                 "Done": 1 if done else 0}
 
-
         return np.array(obs).astype(np.float32), reward, done, info
+
+    def sim_one_step(self, system_input, start_step, stop_step):
+        if self.last_state is None:
+            sim_time, out_step, self.last_state = control.forced_response(self.sys,
+                                                                          self.t[start_step:stop_step + 1],
+                                                                          system_input,
+                                                                          return_x=True)
+        else:
+            try:
+                sim_time, out_step, self.last_state = control.forced_response(self.sys,
+                                                                              self.t[start_step:stop_step + 1],
+                                                                              system_input,
+                                                                              X0=self.last_state[:, -1],
+                                                                              return_x=True)
+            except ValueError:
+                sim_time, out_step, self.last_state = control.forced_response(self.sys,
+                                                                              self.t[start_step:stop_step + 1],
+                                                                              system_input[:-1],
+                                                                              X0=self.last_state[:, -1],
+                                                                              return_x=True)
+        self.out = self.out + out_step.tolist()[:-1]
 
     def render(self, mode='console'):
         x_points = [x for x in range(0, len(self.t), self.model_steps_per_controller_value)]
@@ -191,6 +179,7 @@ class DirectControllerPT2(gym.Env):
             self.line3 = self.ax.scatter(x_points, y_points)
             self.ax.grid()
             self.first_flag = False
+            plt.show()
         else:
             self.line1.set_ydata(self.out)
             self.line2.set_ydata(self.u)

@@ -1,7 +1,8 @@
+import time
 
 import numpy as np
 import json
-import matplotlib
+# import matplotlib
 from typing import Callable
 from stable_baselines3.ddpg.policies import MlpPolicy
 from stable_baselines3.common.noise import NormalActionNoise
@@ -58,13 +59,13 @@ policy_kwargs = dict(activation_fn=th.nn.Sigmoid)
 model = DDPG(MlpPolicy, env, learning_starts=1500, verbose=2, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/")#, policy_kwargs=policy_kwargs,)
 model.learn(total_timesteps=100000, tb_log_name="first_run", callback=callbacks)
 #
-# # save model if you want to
+# save model if you want to
 model.save("ddpg_pendulum04")
 model.save_replay_buffer("replay_buffer")
 #
 
 # # load model if you want to
-# model = DDPG.load("ddpg_pendulum02.zip")
+# model = DDPG.load("ddpg_pendulum04.zip")
 
 # # simulate solutions
 # plt.plot(np.array(env.rewards_log), label="Rewards")
@@ -74,12 +75,12 @@ model.save_replay_buffer("replay_buffer")
 # plt.legend()
 # plt.grid()
 # plt.show()
-save_dict = {"obs:": env.observations_log,
-             "actions:": env.actions_log,
-             "rewards": env.rewards_log,
-             "done": env.dones_log}
-with open("log_data_last_run2.json", "w") as f:
-    json.dump(save_dict, f, indent=4)
+# save_dict = {"obs:": env.observations_log,
+#              "actions:": env.actions_log,
+#              "rewards": env.rewards_log,
+#              "done": env.dones_log}
+# with open("log_data_last_run2.json", "w") as f:
+#     json.dump(save_dict, f, indent=4)
 
 while True:
     # env.init_render()
@@ -100,7 +101,7 @@ while True:
     obs = np.array(obs)
     print(np.mean(obs[:, 0]))
     # print(np.mean(obs[:, 1]))
-    matplotlib.use("TkAgg")
+    # matplotlib.use("TkAgg")
     # plt.plot(obs)
     # plt.show()
     # plt.plot(actions)
@@ -111,5 +112,6 @@ while True:
     # plt.plot(env.out)
     # plt.show()
     print(np.mean(rewards))
-    exit()
+    # exit()
     env.render()
+    time.sleep(0.1)

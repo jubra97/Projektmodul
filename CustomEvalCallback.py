@@ -73,9 +73,10 @@ class CustomEvalCallback(EventCallback):
             # plot obs axes
             ax[0][0].set_title("Obs")
             obs = np.array(env.observations_log)
-            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 0], label="Ref Value")
-            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 1], label="Current Out")
-            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 2], label="Derived Current Out")
+            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 0], label="current_set_point")
+            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 1], label="current_system_input")
+            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 2], label="current_system_output")
+            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 3], label="current_system_output_dot")
             ax[0][0].grid()
             ax[0][0].legend()
 
@@ -110,6 +111,8 @@ class CustomEvalCallback(EventCallback):
             ax[0][2].plot(env.t, env.out, label="Output")
             ax[0][2].grid()
             ax[0][2].legend()
+
+            ax[1][2].text(0.5, 0.5, f"Integrated Reward: {np.sum(reward_data['reward'])}")
 
             fig.tight_layout()
             self.logger.record("Overview/A", Figure(fig, close=True), exclude=("stdout", "log", "json", "csv"))
