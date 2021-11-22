@@ -1,6 +1,6 @@
 import random
 from collections import deque
-
+import matplotlib.pyplot as plt
 import control
 import gym
 import numpy as np
@@ -16,9 +16,9 @@ class DirectControllerPT2(gym.Env):
             self.sys = control.tf([1], [0.001, 0.05, 1])
 
         # # init rendering
-        # plt.ion()
-        # self.fig = plt.figure()
-        # self.ax = self.fig.add_subplot(111)
+        plt.ion()
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111)
         self.first_flag = True
         self.save_renders = True
         self.eval_plot_mode = eval_plot_mode
@@ -37,7 +37,7 @@ class DirectControllerPT2(gym.Env):
         self.last_gain = 0
         self.last_errors = deque([0] * 5, maxlen=5)
 
-        self.observation_space = gym.spaces.Box(low=np.array([-10, -10, -10]), high=np.array([10, 10, 10]),
+        self.observation_space = gym.spaces.Box(low=np.array([-20, -20, -20]), high=np.array([20, 20, 20]),
                                                 shape=(3,),
                                                 dtype=np.float32)
         self.action_space = gym.spaces.Box(low=np.array([-1]), high=np.array([1]), shape=(1,),
@@ -57,7 +57,7 @@ class DirectControllerPT2(gym.Env):
         """
 
         # create u (e.g. step)
-        step_height = random.uniform(1, 1)
+        step_height = random.uniform(1, 10)
         u_before_step = [0] * int(0.5 * self.model_sample_frequency)
         u_step = np.linspace(0, step_height, int(0.05 * self.model_sample_frequency)).tolist()
         # u_step = []
@@ -77,14 +77,14 @@ class DirectControllerPT2(gym.Env):
 
     def step(self, action):
         # set controller output
-        action = action[0] * 10
+        action = action[0] * 50
 
         # constant_value until next update
         # next_reference_value = np.clip(self.last_gain + action, -10, 10)
-        next_reference_value = np.clip(action, -10, 10)
+        next_reference_value = np.clip(action, -50, 50)
         reference_value = [next_reference_value] * (self.model_steps_per_controller_value + 1)
 
-        self.last_gain = next_reference_value
+
         # simulate one controller update step
         i = self.simulation_time_steps
         # try:
@@ -133,7 +133,7 @@ class DirectControllerPT2(gym.Env):
         error = self.out[self.simulation_time_steps - 1] - self.u[self.simulation_time_steps - 1]
         self.last_errors.append(error)  # append to list of last errors
         # integrate error in current episode
-        self.integrated_error += error * 1 / self.controller_sample_frequency
+        self.integrated_error += abs(error) * 1 / self.controller_sample_frequency
 
         derived_error = (self.last_errors[-2] - self.last_errors[-1]) / self.controller_sample_frequency
         derived_error = derived_error * 100  # for equal scaling of obs
@@ -149,13 +149,15 @@ class DirectControllerPT2(gym.Env):
         info = {}
 
         # create reward
-        pen_error = pen_error * 1
-        pen_action = np.square(self.last_gain - next_reference_value) * 0.1
-        pen_integrated = np.square(self.integrated_error) * 1
+        pen_error = pen_error * 100
+        pen_action = np.square(self.last_gain - next_reference_value - (self.u[self.simulation_time_steps-1]
+                                                                        - self.u[self.simulation_time_steps-self.model_steps_per_controller_value-1])) * 1
+        pen_integrated = np.square(self.integrated_error) * 0
         offset = 0
         reward = offset - pen_error - pen_action - pen_integrated
         # reward = round(reward, 0)
         # just for logging
+        self.last_gain = next_reference_value
         self.actions_log.append({"reference_value": next_reference_value,
                                  "action": action})
         self.rewards_log.append({"offset": offset,

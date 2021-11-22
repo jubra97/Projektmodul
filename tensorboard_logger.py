@@ -10,5 +10,4 @@ class TensorboardCallback(BaseCallback):
     def _on_step(self) -> bool:
         for key, value in self.env.tensorboard_log.items():
             self.logger.record(key, value)
-        self.logger.dump(self.num_timesteps)
         return True
