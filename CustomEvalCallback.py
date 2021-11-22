@@ -73,9 +73,9 @@ class CustomEvalCallback(EventCallback):
             # plot obs axes
             ax[0][0].set_title("Obs")
             obs = np.array(env.observations_log)
-            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 0], label="Error")
-            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 1], label="Integrated Error")
-            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 2] * 100, label="Derived Error (*100)")
+            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 0], label="Ref Value")
+            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 1], label="Current Out")
+            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 2], label="Derived Current Out")
             ax[0][0].grid()
             ax[0][0].legend()
 

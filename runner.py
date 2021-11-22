@@ -9,10 +9,12 @@ from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckA
 from stable_baselines3 import DDPG, TD3, A2C
 from stable_baselines3.common.callbacks import EvalCallback, CallbackList
 from envs.DirectControllerPT2 import DirectControllerPT2
+from envs.StepAdaptivePT2 import StepAdaptivePT2
 from tensorboard_logger import TensorboardCallback
 import matplotlib.pyplot as plt
 from CustomEvalCallback import CustomEvalCallback
 from stable_baselines3.common.monitor import Monitor
+import torch as  th
 
 
 def linear_schedule(initial_value: float) -> Callable[[float], float]:
@@ -38,6 +40,7 @@ def linear_schedule(initial_value: float) -> Callable[[float], float]:
 
 # create DmsSim Gym Env
 env = DirectControllerPT2()
+# env = StepAdaptivePT2()
 env = Monitor(env)
 
 # create action noise
@@ -57,11 +60,11 @@ callbacks = CallbackList([tb_callback, eval_callback])
 
 # # use DDPG and create a tensorboard
 # # start tensorboard server with tensorboard --logdir ./dmsSim_ddpg_tensorboard/
-policy_kwargs = dict(net_arch=[16, 16])
-model = TD3(MlpPolicy, env, learning_starts=1500, verbose=0, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/", policy_kwargs=policy_kwargs, batch_size=300)
+policy_kwargs = dict(activation_fn=th.nn.Tanh)
+model = TD3(MlpPolicy, env, learning_starts=1500, verbose=0, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/", policy_kwargs=policy_kwargs,)
 # model = TD3("MlpPolicy", env, verbose=0, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/", batch_size=300, gamma=0.1)#, policy_kwargs=policy_kwargs)
 # model = A2C(ActorCriticPolicy, env, verbose=0, tensorboard_log="./dmsSim_ddpg_tensorboard/")  # , policy_kwargs=policy_kwargs)
-model.learn(total_timesteps=2000000, tb_log_name="first_run", callback=callbacks)
+model.learn(total_timesteps=500000, tb_log_name="first_run", callback=callbacks)
 
 # save model if you want to
 model.save("test_save")
@@ -82,7 +85,7 @@ save_dict = {"obs:": env.observations_log,
              "actions:": env.actions_log,
              "rewards": env.rewards_log,
              "done": env.dones_log}
-with open("log_data_last_run.json2", "w") as f:
+with open("log_data_last_run2.json", "w") as f:
     json.dump(save_dict, f, indent=4)
 
 while True:

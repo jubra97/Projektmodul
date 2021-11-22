@@ -80,8 +80,10 @@ class DirectControllerPT2(gym.Env):
         action = action[0] * 10
 
         # constant_value until next update
-        next_reference_value = np.clip(self.last_gain + action, -10, 10)
+        # next_reference_value = np.clip(self.last_gain + action, -10, 10)
+        next_reference_value = np.clip(action, -10, 10)
         reference_value = [next_reference_value] * (self.model_steps_per_controller_value + 1)
+
         self.last_gain = next_reference_value
         # simulate one controller update step
         i = self.simulation_time_steps
@@ -134,17 +136,25 @@ class DirectControllerPT2(gym.Env):
         self.integrated_error += error * 1 / self.controller_sample_frequency
 
         derived_error = (self.last_errors[-2] - self.last_errors[-1]) / self.controller_sample_frequency
+        derived_error = derived_error * 100  # for equal scaling of obs
+        obs = [-error, self.integrated_error, derived_error]
 
+
+        current_reference_value = self.u[self.simulation_time_steps-1]
+        current_out = self.out[self.simulation_time_steps-1]
+        current_out_dot = (self.out[self.simulation_time_steps-1] - self.out[
+            self.simulation_time_steps - self.model_steps_per_controller_value]) / self.model_steps_per_controller_value * 100
+        obs = [current_reference_value, current_out, current_out_dot]
         # Optionally we can pass additional info, we are not using that for now
         info = {}
 
         # create reward
         pen_error = pen_error * 1
-        pen_action = np.square(action) * 1
+        pen_action = np.square(self.last_gain - next_reference_value) * 0.1
         pen_integrated = np.square(self.integrated_error) * 1
         offset = 0
         reward = offset - pen_error - pen_action - pen_integrated
-
+        # reward = round(reward, 0)
         # just for logging
         self.actions_log.append({"reference_value": next_reference_value,
                                  "action": action})
@@ -154,16 +164,18 @@ class DirectControllerPT2(gym.Env):
                                  "pen_action": pen_action,
                                  "pen_integrated": pen_integrated
                                  })
-        self.observations_log.append([error, self.integrated_error, derived_error])
+        self.observations_log.append(obs)
         self.dones_log.append(done)
-        self.tensorboard_log = {"Obs/Error": error,
-                                "Obs/Integrated_Error": self.integrated_error,
+        self.tensorboard_log = {"Obs/RefVal": obs[0],
+                                "Obs/CurrentOut": obs[1],
+                                "Obs/CurrentOutDot": obs[2],
                                 "Obs/Vel": derived_error,
                                 "Action": reference_value[0],
                                 "Reward": reward,
                                 "Done": 1 if done else 0}
 
-        return np.array([-error, self.integrated_error, derived_error]).astype(np.float32), reward, done, info
+
+        return np.array(obs).astype(np.float32), reward, done, info
 
     def render(self, mode='console'):
         x_points = [x for x in range(0, len(self.t), self.model_steps_per_controller_value)]
