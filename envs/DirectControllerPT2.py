@@ -56,9 +56,10 @@ class DirectControllerPT2(gym.Env):
         """
 
         # create u (e.g. step)
-        step_height = random.uniform(1, 10)
+        step_height = random.uniform(-10, 10)
+        step_time = random.uniform(0, 0.5)
         u_before_step = [0] * int(0.5 * self.model_sample_frequency)
-        u_step = np.linspace(0, step_height, int(0.05 * self.model_sample_frequency)).tolist()
+        u_step = np.linspace(0, step_height, int(step_time * self.model_sample_frequency)).tolist()
         # u_step = []
         u_after_step = [step_height] * int(self.n_sample_points - len(u_before_step) - len(u_step))
         self.u = u_before_step + u_step + u_after_step
