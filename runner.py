@@ -67,20 +67,6 @@ model.save_replay_buffer("replay_buffer")
 # # load model if you want to
 # model = DDPG.load("ddpg_pendulum04.zip")
 
-# # simulate solutions
-# plt.plot(np.array(env.rewards_log), label="Rewards")
-# # plt.plot(np.array(env.actions_log), label="Actions")
-# # plt.plot(np.array(env.observations_log), label="Observations")
-# plt.plot(np.array(env.dones_log), label="Dones")
-# plt.legend()
-# plt.grid()
-# plt.show()
-# save_dict = {"obs:": env.observations_log,
-#              "actions:": env.actions_log,
-#              "rewards": env.rewards_log,
-#              "done": env.dones_log}
-# with open("log_data_last_run2.json", "w") as f:
-#     json.dump(save_dict, f, indent=4)
 
 while True:
     # env.init_render()
