@@ -55,3 +55,27 @@ def create_eval_plot(env):
 
     fig.tight_layout()
     return fig
+
+
+def eval(env_class, model):
+    steps = range(-10, 10)
+    slopes = np.linspace(0, 0.5, 3)
+    import time
+    start = time.perf_counter()
+    for step in steps:
+        for slope in slopes:
+            slope = slope * 0.1
+            print(f"Step: {step}, Slope: {slope}")
+
+            # create env
+            done = False
+            env = env_class()
+            obs = env.reset()
+            while not done:
+                action, _ = model.predict(obs)
+                obs, reward, done, info = env.step(action)
+
+            fig = create_eval_plot(env)
+            plt.savefig(f"eval\\{step}_{slope}.png")
+            del env
+    print(f"Time taken: {time.perf_counter() - start}")
