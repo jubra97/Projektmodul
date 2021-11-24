@@ -55,9 +55,9 @@ class DirectControllerPT2(gym.Env):
         :return: (np.array)
         """
 
-        if not step_height:
+        if step_height is None:
             step_height = random.uniform(-10, 10)
-        if not step_slope:
+        if step_slope is None:
             step_slope = random.uniform(0, 0.5)
         u_before_step = [0] * int(0.5 * self.model_sample_frequency)
         u_step = np.linspace(0, step_height, int(step_slope * self.model_sample_frequency)).tolist()

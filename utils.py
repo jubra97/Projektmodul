@@ -62,20 +62,22 @@ def eval(env_class, model):
     slopes = np.linspace(0, 0.5, 3)
     import time
     start = time.perf_counter()
+    i = 1
     for step in steps:
         for slope in slopes:
-            slope = slope * 0.1
+            # slope = slope * 0.1
             print(f"Step: {step}, Slope: {slope}")
 
             # create env
             done = False
             env = env_class()
-            obs = env.reset()
+            obs = env.reset(step, slope)
             while not done:
                 action, _ = model.predict(obs)
                 obs, reward, done, info = env.step(action)
 
             fig = create_eval_plot(env)
-            plt.savefig(f"eval\\{step}_{slope}.png")
+            plt.savefig(f"eval\\i_{step}_{slope}.png")
             del env
+            i += 1
     print(f"Time taken: {time.perf_counter() - start}")

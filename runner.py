@@ -57,19 +57,19 @@ callbacks = CallbackList([tb_callback, eval_callback])
 
 # # use DDPG and create a tensorboard
 # # start tensorboard server with tensorboard --logdir ./dmsSim_ddpg_tensorboard/
-policy_kwargs = dict(activation_fn=th.nn.Sigmoid)
-model = DDPG(MlpPolicy, env, learning_starts=1500, verbose=2, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/")#, policy_kwargs=policy_kwargs,)
-model.learn(total_timesteps=50000, tb_log_name="first_run", callback=callbacks)
-# utils.eval(DirectControllerPT2, model)
-#
-# # save model if you want to
-model.save("PI_Adaptive")
+# policy_kwargs = dict(activation_fn=th.nn.Sigmoid)
+# model = DDPG(MlpPolicy, env, learning_starts=3000, verbose=2, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/")#, policy_kwargs=policy_kwargs,)
+# model.learn(total_timesteps=100000, tb_log_name="direct_control", callback=callbacks)
+# # utils.eval(DirectControllerPT2, model)
+# #
+# # # save model if you want to
+# model.save("direct_control")
 # model.save_replay_buffer("replay_buffer")
 # #
 
 # # load model if you want to
-# model = DDPG.load("ddpg_pendulum04.zip")
-
+model = DDPG.load("direct_control.zip")
+utils.eval(DirectControllerPT2, model)
 
 # while True:
 #     # env.init_render()
