@@ -55,7 +55,7 @@ class PIAdaptivePT2(gym.Env):
         if not step_height:
             step_height = random.uniform(-10, 10)
         if not step_slope:
-            step_slope = random.uniform(0, 0.5)
+            step_slope = random.uniform(0, 0.1)
         u_before_step = [0] * int(0.5 * self.model_sample_frequency)
         u_step = np.linspace(0, step_height, int(step_slope * self.model_sample_frequency)).tolist()
         # u_step = []

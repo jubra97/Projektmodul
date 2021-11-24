@@ -39,7 +39,7 @@ import utils
 
 
 # create DmsSim Gym Env
-env = PIAdaptivePT2()
+env = DirectControllerPT2()
 env = Monitor(env)
 
 # create action noise
@@ -50,7 +50,7 @@ action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.1) * np
 tb_callback = TensorboardCallback(env)
 
 # create eval callback
-eval_callback = CustomEvalCallback(PIAdaptivePT2, eval_freq=1500, deterministic=True)
+eval_callback = CustomEvalCallback(DirectControllerPT2, eval_freq=1500, deterministic=True)
 
 # create callback list
 callbacks = CallbackList([tb_callback, eval_callback])

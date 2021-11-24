@@ -167,6 +167,7 @@ class DirectControllerPT2(gym.Env):
                                                                               system_input[:-1],
                                                                               X0=self.last_state[:, -1],
                                                                               return_x=True)
+        out_step = out_step + np.random.normal(0, 0.01, size=out_step.shape[0])
         self.out = self.out + out_step.tolist()[:-1]
 
     def render(self, mode='console'):
