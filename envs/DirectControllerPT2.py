@@ -49,17 +49,18 @@ class DirectControllerPT2(gym.Env):
         self.tensorboard_log = {}
         self.dones_log = []
 
-    def reset(self):
+    def reset(self, step_height=None, step_slope=None):
         """
         Important: the observation must be a numpy array; Return after every step with random step between 0, 2
         :return: (np.array)
         """
 
-        # create u (e.g. step)
-        step_height = random.uniform(-10, 10)
-        step_time = random.uniform(0, 0.5)
+        if not step_height:
+            step_height = random.uniform(-10, 10)
+        if not step_slope:
+            step_slope = random.uniform(0, 0.5)
         u_before_step = [0] * int(0.5 * self.model_sample_frequency)
-        u_step = np.linspace(0, step_height, int(step_time * self.model_sample_frequency)).tolist()
+        u_step = np.linspace(0, step_height, int(step_slope * self.model_sample_frequency)).tolist()
         # u_step = []
         u_after_step = [step_height] * int(self.n_sample_points - len(u_before_step) - len(u_step))
         self.u = u_before_step + u_step + u_after_step
