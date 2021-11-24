@@ -9,11 +9,13 @@ from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3 import DDPG
 from stable_baselines3.common.callbacks import CallbackList
 from envs.DirectControllerPT2 import DirectControllerPT2
+from envs.PIAdaptivePT2 import PIAdaptivePT2
 from tensorboard_logger import TensorboardCallback
 import matplotlib.pyplot as plt
 from CustomEvalCallback import CustomEvalCallback
 from stable_baselines3.common.monitor import Monitor
 import torch as th
+import utils
 
 # def linear_schedule(initial_value: float) -> Callable[[float], float]:
 #     """
@@ -37,7 +39,7 @@ import torch as th
 
 
 # create DmsSim Gym Env
-env = DirectControllerPT2()
+env = PIAdaptivePT2()
 env = Monitor(env)
 
 # create action noise
@@ -48,7 +50,7 @@ action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.1) * np
 tb_callback = TensorboardCallback(env)
 
 # create eval callback
-eval_callback = CustomEvalCallback(DirectControllerPT2, eval_freq=1500, deterministic=True)
+eval_callback = CustomEvalCallback(PIAdaptivePT2, eval_freq=1500, deterministic=True)
 
 # create callback list
 callbacks = CallbackList([tb_callback, eval_callback])
@@ -57,47 +59,48 @@ callbacks = CallbackList([tb_callback, eval_callback])
 # # start tensorboard server with tensorboard --logdir ./dmsSim_ddpg_tensorboard/
 policy_kwargs = dict(activation_fn=th.nn.Sigmoid)
 model = DDPG(MlpPolicy, env, learning_starts=1500, verbose=2, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/")#, policy_kwargs=policy_kwargs,)
-model.learn(total_timesteps=100000, tb_log_name="first_run", callback=callbacks)
+model.learn(total_timesteps=50000, tb_log_name="first_run", callback=callbacks)
+# utils.eval(DirectControllerPT2, model)
 #
-# save model if you want to
-model.save("ddpg_pendulum04")
-model.save_replay_buffer("replay_buffer")
-#
+# # save model if you want to
+model.save("PI_Adaptive")
+# model.save_replay_buffer("replay_buffer")
+# #
 
 # # load model if you want to
 # model = DDPG.load("ddpg_pendulum04.zip")
 
 
-while True:
-    # env.init_render()
-    ob = env.reset()
-    dones = False
-    rewards = []
-    obs = []
-    actions = []
-    while dones is not True:
-        action, _states = model.predict(ob)
-        actions.append(action)
-        print(f"Action {action}")
-        ob, reward, dones, info = env.step(action)
-        print(f"Observation: {ob}")
-        print(f"Reward {reward}")
-        rewards.append(reward)
-        obs.append(ob)
-    obs = np.array(obs)
-    print(np.mean(obs[:, 0]))
-    # print(np.mean(obs[:, 1]))
-    # matplotlib.use("TkAgg")
-    # plt.plot(obs)
-    # plt.show()
-    # plt.plot(actions)
-    # plt.show()
-    # plt.plot(rewards)
-    # plt.show()
-    # plt.plot(env.u)
-    # plt.plot(env.out)
-    # plt.show()
-    print(np.mean(rewards))
-    # exit()
-    env.render()
-    time.sleep(0.1)
+# while True:
+#     # env.init_render()
+#     ob = env.reset()
+#     dones = False
+#     rewards = []
+#     obs = []
+#     actions = []
+#     while dones is not True:
+#         action, _states = model.predict(ob)
+#         actions.append(action)
+#         print(f"Action {action}")
+#         ob, reward, dones, info = env.step(action)
+#         print(f"Observation: {ob}")
+#         print(f"Reward {reward}")
+#         rewards.append(reward)
+#         obs.append(ob)
+#     obs = np.array(obs)
+#     print(np.mean(obs[:, 0]))
+#     # print(np.mean(obs[:, 1]))
+#     # matplotlib.use("TkAgg")
+#     # plt.plot(obs)
+#     # plt.show()
+#     # plt.plot(actions)
+#     # plt.show()
+#     # plt.plot(rewards)
+#     # plt.show()
+#     # plt.plot(env.u)
+#     # plt.plot(env.out)
+#     # plt.show()
+#     print(np.mean(rewards))
+#     # exit()
+#     env.render()
+#     time.sleep(0.1)
