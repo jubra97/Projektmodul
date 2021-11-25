@@ -34,10 +34,12 @@ class DirectControllerPT2(gym.Env):
         self.out = []
         self.integrated_error = 0
         self.last_action = 0
-        self.last_errors = deque([0] * 5, maxlen=5)
+        self.last_system_inputs = deque([0] * 3, maxlen=3)
+        self.last_reference_values = deque([0] * 3, maxlen=3)
+        self.last_system_output = deque([0] * 3, maxlen=3)
 
-        self.observation_space = gym.spaces.Box(low=np.array([-100, -1, -100, -100]), high=np.array([100, 1, 100, 100]),
-                                                shape=(4,),
+        self.observation_space = gym.spaces.Box(low=np.array([-100]*9), high=np.array([100]*9),
+                                                shape=(9,),
                                                 dtype=np.float32)
         self.action_space = gym.spaces.Box(low=np.array([-1]), high=np.array([1]), shape=(1,),
                                            dtype=np.float32)
@@ -71,10 +73,14 @@ class DirectControllerPT2(gym.Env):
         self.out = []
         self.integrated_error = 0
         self.last_action = 0
-        self.last_errors = deque([0] * 5, maxlen=5)
+        self.last_system_inputs = deque([0] * 3, maxlen=3)
+        self.last_reference_values = deque([0] * 3, maxlen=3)
+        self.last_system_output = deque([0] * 3, maxlen=3)
+        obs = [0, 0, 0, 0]
+        obs = list(self.last_system_inputs) + list(self.last_reference_values) + list(self.last_system_output)
 
         # initial observation is zero
-        return np.array([0, 0, 0, 0]).astype(np.float32)
+        return np.array(obs).astype(np.float32)
 
     def step(self, action):
         action = action[0]
@@ -97,30 +103,35 @@ class DirectControllerPT2(gym.Env):
 
         # create observation with errors
         # error between system output and set point
-        # error = self.out[stop_step] - self.u[stop_step]
+        error = self.out[stop_step] - self.u[stop_step]
         # self.last_errors.append(error)  # append to list of last errors
         # # integrate error in current episode TODO: Use absolute or non absoulte integrated eroor
-        # self.integrated_error += abs(error) * 1 / self.controller_sample_frequency
+        self.integrated_error += abs(error) * 1 / self.controller_sample_frequency
         # derived_error = (self.last_errors[-2] - self.last_errors[-1]) / self.controller_sample_frequency
         # derived_error = derived_error * 100  # for equal scaling of obs
         # obs = [-error, self.integrated_error, derived_error]
 
         # create observation with system and input state
-        current_set_point = self.u[stop_step]
-        current_system_output = self.out[stop_step]
-        current_system_output_dot = (self.out[stop_step] - self.out[
-            stop_step - self.model_steps_per_controller_value+1]) / self.model_steps_per_controller_value * 100
-        current_system_input = action
-        obs = [current_set_point, current_system_input, current_system_output, current_system_output_dot]
+        # current_set_point = self.u[stop_step]
+        # current_system_output = self.out[stop_step]
+        # current_system_output_dot = (self.out[stop_step] - self.out[
+        #     stop_step - self.model_steps_per_controller_value+1]) / self.model_steps_per_controller_value * 100
+        # current_system_input = action
+        # obs = [current_set_point, current_system_input, current_system_output, current_system_output_dot]
+        self.last_system_inputs.append(action)
+        self.last_system_output.append(self.out[stop_step])
+        self.last_reference_values.append(self.u[stop_step])
+        obs = list(self.last_system_inputs) + list(self.last_reference_values) + list(self.last_system_output)
         # Optionally we can pass additional info, we are not using that for now
         info = {}
 
         # create reward
         pen_error = np.mean(np.abs(np.array(self.out[start_step:stop_step]) - np.array(
             self.u[start_step:stop_step])))  # mean error over last simulation step
+        pen_error = np.abs(self.out[stop_step] - self.u[stop_step])
         pen_error = pen_error * 100
         pen_action = np.square(self.last_action - system_input)
-        pen_integrated = np.square(self.integrated_error) * 0
+        pen_integrated = np.square(self.integrated_error) * 10
         offset = 0
         reward = offset - pen_error - pen_action - pen_integrated
 
