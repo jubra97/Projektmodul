@@ -8,12 +8,14 @@ from stable_baselines3.ddpg.policies import MlpPolicy
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3 import DDPG
 from stable_baselines3.common.callbacks import CallbackList
-from envs.DirectControllerPT2 import DirectControllerPT2
+# from envs.DirectControllerv2 import DirectControllerPT2
+from envs.DirectControllerv2 import DirectControllerPT2
 from envs.PIAdaptivePT2 import PIAdaptivePT2
 from tensorboard_logger import TensorboardCallback
 import matplotlib.pyplot as plt
 from CustomEvalCallback import CustomEvalCallback
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import VecCheckNan, DummyVecEnv
 import torch as th
 import utils
 
@@ -42,25 +44,29 @@ import utils
 env = DirectControllerPT2()
 env = Monitor(env)
 
+online_eval_env = DirectControllerPT2(log=True)
+online_eval_env = Monitor(online_eval_env)
+# env = VecCheckNan(env)
+
+# env = DummyVecEnv([lambda: DirectControllerPT2()])
+# env = VecCheckNan(env, raise_exception=True)
+
 # create action noise
 n_actions = env.action_space.shape[-1]
-action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.1) * np.ones(n_actions))
-
-# create tensorboard callback
-tb_callback = TensorboardCallback(env)
+action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.15) * np.ones(n_actions))
 
 # create eval callback
-eval_callback = CustomEvalCallback(DirectControllerPT2, eval_freq=1500, deterministic=True)
+eval_callback = CustomEvalCallback(online_eval_env, eval_freq=1500, deterministic=True)
 
 # create callback list
-callbacks = CallbackList([tb_callback, eval_callback])
+callbacks = CallbackList([eval_callback])
 
 # # use DDPG and create a tensorboard
 # # start tensorboard server with tensorboard --logdir ./dmsSim_ddpg_tensorboard/
 # policy_kwargs = dict(activation_fn=th.nn.Sigmoid)
 model = DDPG(MlpPolicy, env, learning_starts=3000, verbose=2, action_noise=action_noise, tensorboard_log="./dmsSim_ddpg_tensorboard/")#, policy_kwargs=policy_kwargs,)
-model.learn(total_timesteps=100000, tb_log_name="direct_control", callback=callbacks)
-utils.eval(DirectControllerPT2, model)
+model.learn(total_timesteps=50000, tb_log_name="direct_control", callback=callbacks)
+utils.eval(DirectControllerPT2(log=True), model)
 # #
 # # # save model if you want to
 # model.save("direct_control")

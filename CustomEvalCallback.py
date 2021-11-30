@@ -2,7 +2,6 @@ import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from stable_baselines3.common.callbacks import EventCallback, BaseCallback
 from stable_baselines3.common.logger import Figure
-from utils import create_eval_plot
 
 class CustomEvalCallback(EventCallback):
     """
@@ -54,19 +53,16 @@ class CustomEvalCallback(EventCallback):
         if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
             # crete eval env
             print("Start Log")
-            env = self.eval_env()
 
-            ob = env.reset()
+            ob = self.eval_env.reset()
             done = False
             while done is not True:
                 action, _states = self.model.predict(ob, deterministic=self.deterministic)
-                ob, reward, done, info = env.step(action)
+                ob, reward, done, info = self.eval_env.step(action)
 
             print(f"Logging Image Call Nr: {self.n_calls}")
-            fig = create_eval_plot(env)
+            fig = self.eval_env.create_eval_plot()
             self.logger.record("Overview/A", Figure(fig, close=True), exclude=("stdout", "log", "json", "csv"))
             plt.close()
-
-            del env
 
         return True
