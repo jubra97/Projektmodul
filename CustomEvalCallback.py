@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from stable_baselines3.common.callbacks import EventCallback, BaseCallback
 from stable_baselines3.common.logger import Figure
 
-class CustomEvalCallback(EventCallback):
+class CustomEvalCallback(BaseCallback):
     """
     Callback for evaluating an agent.
 
@@ -45,8 +45,15 @@ class CustomEvalCallback(EventCallback):
 
         self.eval_env = eval_env
 
-    def _init_callback(self) -> None:
-        pass
+    # def _init_callback(self):
+    #     import torch.nn as nn
+    #     def init_with_zero(m):
+    #         if type(m) == nn.Linear:
+    #             nn.init.zeros_(m.weight)
+    #             # nn.init.zeros_(m.bias)
+    #     self.model.actor.mu.apply(init_with_zero)
+    #     print("A")
+    #     print("B")
 
     def _on_step(self) -> bool:
 
