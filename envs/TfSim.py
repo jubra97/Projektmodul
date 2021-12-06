@@ -12,8 +12,11 @@ class TfSim:
         if model_freq % sensor_freq != 0:
             raise ValueError("model_sample_frequency must be a multiple of sensor_sample_frequency")
 
-        self.sys = copy.deepcopy(system)
-        self.sys = control.tf2ss(self.sys)
+        if system:
+            self.sys = copy.deepcopy(system)
+            self.sys = control.tf2ss(self.sys)
+        else:
+            self.sys = None
         self.model_freq = model_freq
         self.sensor_freq = sensor_freq
         self.controller_freq = controller_freq
@@ -67,18 +70,20 @@ class TfSim:
                                                                               X0=self.last_state[:, -1],
                                                                               return_x=True)
         if add_noise:
-            out_step = out_step + np.random.normal(0, 0.01, size=out_step.shape[0])
+            out_step = out_step + np.random.normal(0, 0.005, size=out_step.shape[0])
 
         if stop == len(self.t):
             self._sim_out = self._sim_out + out_step.tolist()
+            self._u = self._u + u
             self.done = True
         else:
             self._sim_out = self._sim_out + out_step.tolist()[:-1]
+            self._u = self._u + u[:-1]
 
         self.sensor_out = self.sensor_out + self._sim_out[stop:start:-self.model_steps_per_senor_update][::-1]
         self.u_sensor = self.u_sensor + u[:1:-self.model_steps_per_senor_update][::-1]
 
-        self._u = self._u + u
+
         self.current_simulation_step = stop
         self.current_simulation_time = self.t[stop-1]
         self.current_sensor_step += self.sensor_steps_per_controller_update
