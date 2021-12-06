@@ -26,6 +26,7 @@ class DirectControllerPT2(gym.Env):
         self.w_sensor = []
         self.integrated_error = 0
         self.log = log
+        self.n_episodes = 0
 
         self.episode_log = {"obs": {}, "rewards": {}, "action": {}, "function": {}}
         self.log_all = []
@@ -37,8 +38,9 @@ class DirectControllerPT2(gym.Env):
                                            dtype=np.float32)
 
     def reset(self, step_height=None, step_slope=None):
-        if len(self.episode_log["obs"]) != 0:
+        if self.n_episodes != 0:
             self.log_all.append(self.episode_log)
+        self.n_episodes += 1
 
         self.sim.reset()
         self.w, self.w_sensor = self.set_w(step_height, step_slope)
@@ -106,7 +108,7 @@ class DirectControllerPT2(gym.Env):
             self.episode_log["obs"]["outputs_vel"].append(outputs_vel)
         return obs
 
-    def _create_obs(self, first=False):
+    def _create_obs_last_states(self, first=False):
         if first:
             obs = list(self.last_set_points) + list(self.last_system_inputs) + list(self.last_system_outputs)
         else:
@@ -118,7 +120,7 @@ class DirectControllerPT2(gym.Env):
             self.episode_log["obs"]["last_system_outputs"].append(list(self.last_system_outputs))
         return obs
 
-    def _create_obs_error(self, first=False):
+    def _create_obs_last_errors(self, first=False):
         set_points = np.array(list(self.last_set_points))
         system_outputs = np.array(list(self.last_system_outputs))
         errors = (set_points - system_outputs).tolist()
@@ -143,8 +145,8 @@ class DirectControllerPT2(gym.Env):
         pen_error = np.abs(e)
         pen_error = pen_error * 1
         pen_action = np.square(list(self.last_system_inputs)[-(self.sim.sensor_steps_per_controller_update+1)]
-                               - list(self.last_system_inputs)[-self.sim.sensor_steps_per_controller_update]) * 0.1
-        pen_integrated = np.abs(self.integrated_error) * 0
+                               - list(self.last_system_inputs)[-self.sim.sensor_steps_per_controller_update]) * 0.5
+        pen_integrated = np.abs(self.integrated_error) * 0.2
         reward = -pen_error - pen_action - pen_integrated
 
         if self.log:
@@ -158,14 +160,16 @@ class DirectControllerPT2(gym.Env):
     def step(self, action):
         # action und obs oder last action und obs? Schaue ich sonst in die Zukunft?
         system_input = np.clip(action[0] * 20, -20, 20)
+        # system_input = round(system_input, 1)
         system_input_trajectory = [system_input] * (self.sim.model_steps_per_controller_update + 1)
 
         if self.log:
             self.episode_log["action"]["value"].append(system_input)
             self.episode_log["action"]["change"].append(system_input - self.last_system_inputs[-1])
 
-        self.sim.sim_one_step(u=system_input_trajectory)
+        self.sim.sim_one_step(u=system_input_trajectory, add_noise=True)
 
+        # if self.sim.current_simulation_step != 0:
         for step in range(self.sim.sensor_steps_per_controller_update, 0, -1):
             self.last_system_inputs.append(self.sim.u_sensor[self.sim.current_sensor_step - step])
             self.last_system_outputs.append(self.sim.sensor_out[self.sim.current_sensor_step - step])
