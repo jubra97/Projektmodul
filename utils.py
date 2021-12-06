@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-
+import pathlib
+import json
 
 # def create_eval_plot(env):
 #     samples_per_episode = env.sim.n_sample_points
@@ -57,17 +58,19 @@ import numpy as np
 #     return fig
 
 
-def eval(env, model):
+def eval(env, model, folder_name):
     print(env)
     steps = range(-10, 11)
     slopes = np.linspace(0, 0.5, 3)
     import time
     start = time.perf_counter()
     i = 1
+    pathlib.Path(f"eval\\{folder_name}").mkdir(exist_ok=True)
+    rewards = []
+    extra_info = {}
     for step in steps:
         for slope in slopes:
             # slope = slope * 0.1
-            print(f"Step: {step}, Slope: {slope}")
 
             # create env
             done = False
@@ -75,8 +78,14 @@ def eval(env, model):
             while not done:
                 action, _ = model.predict(obs)
                 obs, reward, done, info = env.step(action)
-
+                rewards.append(reward)
             fig = env.create_eval_plot()
-            plt.savefig(f"eval\\{i}_{step}_{slope}.png")
+            plt.savefig(f"eval\\{folder_name}\\{i}_{step}_{slope}.png")
+            plt.close()
             i += 1
+    mean_episode_reward = np.sum(rewards)/env.n_episodes
+    extra_info["mean_episode_reward"] = mean_episode_reward
+    with open(f"eval\\{folder_name}\\extra_info.json", 'w+') as f:
+        json.dump(extra_info, f)
+    print(mean_episode_reward)
     print(f"Time taken: {time.perf_counter() - start}")
