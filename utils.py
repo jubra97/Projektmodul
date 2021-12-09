@@ -59,7 +59,6 @@ import json
 
 
 def eval(env, model, folder_name):
-    print(env)
     steps = range(-10, 11)
     slopes = np.linspace(0, 0.5, 3)
     import time
@@ -67,6 +66,7 @@ def eval(env, model, folder_name):
     i = 1
     pathlib.Path(f"eval\\{folder_name}").mkdir(exist_ok=True)
     rewards = []
+    rmse = []
     extra_info = {}
     for step in steps:
         for slope in slopes:
@@ -83,9 +83,13 @@ def eval(env, model, folder_name):
             plt.savefig(f"eval\\{folder_name}\\{i}_{step}_{slope}.png")
             plt.close()
             i += 1
+            rmse_episode = np.square(np.array(env.w) - np.array(env.sim._sim_out))
+            rmse.append(rmse_episode)
     mean_episode_reward = np.sum(rewards)/env.n_episodes
     extra_info["mean_episode_reward"] = mean_episode_reward
+    extra_info["rmse"] = np.mean(rmse)
+
     with open(f"eval\\{folder_name}\\extra_info.json", 'w+') as f:
         json.dump(extra_info, f)
-    print(mean_episode_reward)
+    print(extra_info["rmse"])
     print(f"Time taken: {time.perf_counter() - start}")
