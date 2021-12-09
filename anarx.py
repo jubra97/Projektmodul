@@ -18,7 +18,8 @@ y_train = mat['y_train'][0]
 y_valid = mat['y_valid'][0]
 
 
-
+OUTPUT_LAGS = 5
+INPUT_LAGS = 1
 
 u_train= u_train.reshape(-1,1)
 y_train= y_train.reshape(-1,1)
@@ -28,24 +29,39 @@ y_valid = y_valid.reshape(-1,1)
 class NARX(nn.Module):
     def __init__(self):
         super().__init__()
-        self.lin = nn.Linear(6, 30)
-        self.lin2 = nn.Linear(30, 30)
-        self.lin3 = nn.Linear(30, 1)
-        self.tanh = nn.Tanh()
-        self.relu = ReLU()
-
+        self.lin_io1 = nn.ModuleList([nn.Linear(2, 5) for i in range(min(OUTPUT_LAGS,INPUT_LAGS))])
+        self.lin_io2 = nn.ModuleList([nn.Linear(5, 5) for i in range(min(OUTPUT_LAGS,INPUT_LAGS))])
+        self.lin_io3 = nn.ModuleList([nn.Linear(5, 1) for i in range(min(OUTPUT_LAGS,INPUT_LAGS))])
+        self.lin1 = nn.ModuleList([nn.Linear(1, 5) for i in range(max(OUTPUT_LAGS,INPUT_LAGS)-min(OUTPUT_LAGS,INPUT_LAGS))])
+        self.lin2 = nn.ModuleList([nn.Linear(5, 5) for i in range(max(OUTPUT_LAGS,INPUT_LAGS)-min(OUTPUT_LAGS,INPUT_LAGS))])
+        self.lin3 = nn.ModuleList([nn.Linear(5, 1) for i in range(max(OUTPUT_LAGS,INPUT_LAGS)-min(OUTPUT_LAGS,INPUT_LAGS))])
+        self.activ2 = nn.Tanh()
+        self.activ1 = nn.Tanh()
     def forward(self, xb):
-        z = self.lin(xb)
-        z = self.relu(z)
-        z = self.lin2(z)
-        z = self.tanh(z)
-        z = self.lin3(z)
+        x_list = torch.tensor_split(xb, OUTPUT_LAGS+INPUT_LAGS, dim=-1)
+        z = 0
+        for i in range(min(OUTPUT_LAGS,INPUT_LAGS)):
+            y = torch.cat((x_list[i], x_list[min(OUTPUT_LAGS,INPUT_LAGS)+i]), dim = 1)
+            y = self.lin_io1[i](y)
+            y = self.activ1(y)
+            y = self.lin_io2[i](y)
+            y = self.activ2(y)
+            y = self.lin_io3[i](y)
+            z = z + y
+        for i in range(max(OUTPUT_LAGS,INPUT_LAGS)-min(OUTPUT_LAGS,INPUT_LAGS)):
+            y = x_list[i]
+            y = self.lin1[i](y)
+            y = self.activ1(y)
+            y = self.lin2[i](y)
+            y = self.activ2(y)
+            y = self.lin3[i](y)
+            z = z + y
         return z
 
 narx_net = NARXNN(
         net=NARX(),
-        ylag=5,
-        xlag=1,
+        ylag=OUTPUT_LAGS,
+        xlag=INPUT_LAGS,
         loss_func='mse_loss',
         optimizer='Adam',
         epochs=1000,
