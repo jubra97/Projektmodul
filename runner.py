@@ -46,9 +46,9 @@ def linear_schedule(initial_value: float=1e-3) -> Callable[[float], float]:
 # AF_STRING = "Sigmoid"
 
 
-for actor_net in [[2, 2], [3, 3], [5, 5], [50, 50]]:
-    for critic_net in [[100, 100], [200, 200], [300, 300], [500, 500]]:
-        for af, af_name in zip([th.nn.Sigmoid, th.nn.Tanh, th.nn.ReLU], ["Sigmoid", "TanH", "ReLU"]):
+for actor_net in [[4, 4]]:
+    for critic_net in [[200, 200]]:
+        for af, af_name in zip([th.nn.Tanh], ["TanH"]):
 
             # for action_noise in [0.3, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.003, 0.001, 0.0001, 0]:
             RUN_NAME = f"obs_with_vel_diff-actor_net_{actor_net}_critic_net_{critic_net}_activation_fn_{af_name}_test"
@@ -84,10 +84,10 @@ for actor_net in [[2, 2], [3, 3], [5, 5], [50, 50]]:
                          learning_starts=3000,
                          verbose=2,
                          action_noise=action_noise,
-                         tensorboard_log="./net_params_discrete_reward/",
+                         tensorboard_log="./test/",
                          policy_kwargs=policy_kwargs,
                          )
-            model.learn(total_timesteps=100_000, tb_log_name=f"actor_net{actor_net}_critic_net{critic_net}_af_{af_name}", callback=callbacks)
+            model.learn(total_timesteps=50_000, tb_log_name=f"test_positive_reward", callback=callbacks)
             utils.eval(DirectControllerPT2(log=True), model, folder_name=RUN_NAME)
             # #
             # # # save model if you want to
