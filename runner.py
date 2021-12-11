@@ -46,7 +46,7 @@ def linear_schedule(initial_value: float=1e-3) -> Callable[[float], float]:
 # AF_STRING = "Sigmoid"
 
 
-for actor_net in [[3, 3]]:
+for actor_net in [[4, 4]]:
     for critic_net in [[200, 200]]:
         for af, af_name in zip([th.nn.Tanh], ["TanH"]):
 
@@ -87,7 +87,7 @@ for actor_net in [[3, 3]]:
                          tensorboard_log="./test/",
                          policy_kwargs=policy_kwargs,
                          )
-            model.learn(total_timesteps=100_000, tb_log_name=f"test_sqrt", callback=callbacks)
+            model.learn(total_timesteps=50_000, tb_log_name=f"test", callback=callbacks)
             utils.eval(DirectControllerPT2(log=True), model, folder_name=RUN_NAME)
             # #
             # # # save model if you want to

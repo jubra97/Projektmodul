@@ -178,7 +178,9 @@ class DirectControllerPT2(gym.Env):
         self.abs_integrated_error = np.clip(self.abs_integrated_error, 0, 20)
 
         pen_action = np.abs(list(self.last_system_inputs)[-(self.sim.sensor_steps_per_controller_update+1)]
-                               - list(self.last_system_inputs)[-self.sim.sensor_steps_per_controller_update]) * 0.4
+                               - list(self.last_system_inputs)[-self.sim.sensor_steps_per_controller_update])
+
+        pen_action = np.clip(pen_action, 0, 2) * 10
 
         abs_error = np.abs(e)
         reward = 0
