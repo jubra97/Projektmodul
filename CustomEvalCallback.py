@@ -2,6 +2,7 @@ import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from stable_baselines3.common.callbacks import EventCallback, BaseCallback
 from stable_baselines3.common.logger import Figure
+import torch as th
 
 class CustomEvalCallback(BaseCallback):
     """
@@ -45,10 +46,11 @@ class CustomEvalCallback(BaseCallback):
 
         self.eval_env = eval_env
 
-    # def _init_callback(self):
-    #     print(type(self.model.actor))
-    #     self.logger.output_formats[1].writer.add_graph(self.model.actor.mu)
-    #     print("A")
+    def _init_callback(self):
+        print(type(self.model.actor))
+        import torch as th
+        self.logger.output_formats[1].writer.add_graph(self.model.actor.mu, th.Tensor([1] * 7).to(self.model.device))
+        print("A")
     #     # import torch.nn as nn
     #     # def init_with_zero(m):
     #     #     if type(m) == nn.Linear:
@@ -74,5 +76,9 @@ class CustomEvalCallback(BaseCallback):
             fig = self.eval_env.create_eval_plot()
             self.logger.record("Overview/A", Figure(fig, close=True), exclude=("stdout", "log", "json", "csv"))
             plt.close()
+            first_layer_weight = self.model.actor.mu._modules["0"].weight
+            self.logger.output_formats[1].writer.add_histogram("test", first_layer_weight, self.n_calls)
 
+            self.logger.output_formats[1].writer.add_graph(self.model.actor.mu,
+                                                           th.Tensor([1] * 7).to(self.model.device))
         return True
