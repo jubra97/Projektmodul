@@ -145,20 +145,20 @@ class DirectControllerPT2(gym.Env):
         w = np.array(list(self.last_set_points)[-self.sim.sensor_steps_per_controller_update:])
         e = np.mean(w - y)
         self.integrated_error = self.integrated_error + e * (1/self.sim.model_steps_per_controller_update)
-        self.integrated_error = np.clip(self.integrated_error, -20, 20)
+        self.integrated_error = np.clip(self.integrated_error, -0.3, 0.3)
         self.abs_integrated_error = self.abs_integrated_error + abs(e) * (1/self.sim.model_steps_per_controller_update)
         self.abs_integrated_error = np.clip(self.abs_integrated_error, 0, 20)
 
 
         pen_error = np.abs(e)
-        pen_error = pen_error * 1
-        pen_action = np.square(list(self.last_system_inputs)[-(self.sim.sensor_steps_per_controller_update+1)]
-                               - list(self.last_system_inputs)[-self.sim.sensor_steps_per_controller_update]) * 0.01
-        pen_integrated = np.abs(self.abs_integrated_error) * 10
-        if pen_error < 0.05:
-            reward = 5
-        else:
-            reward = -pen_error - pen_action - pen_integrated
+        pen_error = np.sqrt(pen_error) * 1
+        pen_action = np.abs(list(self.last_system_inputs)[-(self.sim.sensor_steps_per_controller_update+1)]
+                               - list(self.last_system_inputs)[-self.sim.sensor_steps_per_controller_update])
+        pen_action = np.sqrt(pen_action) * 0.1
+        pen_integrated = np.square(self.integrated_error) * 50
+
+        reward = pen_error + pen_action + pen_integrated
+        reward = -reward*5
 
         if self.log:
             self.episode_log["rewards"]["summed"].append(reward)
@@ -231,7 +231,7 @@ class DirectControllerPT2(gym.Env):
             done = False
 
         obs = self._create_obs_with_vel(first=False)
-        reward = self._create_reward_discrete()
+        reward = self._create_reward()
 
         return np.array(obs), reward, done, {}
 
