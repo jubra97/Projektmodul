@@ -1,101 +1,86 @@
-import pyads
-import time
+import gym
+from envs.OnlineSystem import OnlineSystem
+import copy
 import numpy as np
-from ctypes import sizeof, Structure
-import matplotlib.pyplot as plt
-import threading
 
 
-BUFFER_SIZE = 20
+class DirectControllerOnline(gym.Env):
+
+    def __init__(self, sample_freq=5000):
+        super(DirectControllerOnline).__init__()
+
+        self.online_system = OnlineSystem()
+
+        self.episode_log = {"obs": {}, "rewards": {}, "action": {}, "function": {}}
+        self.log_all = []
+        self.n_episodes = 0
+        self.sample_freq = sample_freq
 
 
-class AdsBuffer(Structure):
+        self.observation_space = gym.spaces.Box(low=np.array([-100]*7), high=np.array([100]*7),
+                                                shape=(7,),
+                                                dtype=np.float32)
+        self.action_space = gym.spaces.Box(low=np.array([-1]), high=np.array([1]), shape=(1,),
+                                           dtype=np.float32)
 
-    _fields_ = [
-
-        ("t", pyads.PLCTYPE_LREAL * BUFFER_SIZE),
-        ("w", pyads.PLCTYPE_LREAL * BUFFER_SIZE),
-        ("u", pyads.PLCTYPE_LREAL * BUFFER_SIZE),
-        ("y", pyads.PLCTYPE_LREAL * BUFFER_SIZE)
-
-    ]
-
-
-class DirectControllerOnline:
-    def __init__(self):
-        self.last_timestamps = []
-        self.last_timestamp = 0
-
-        self.ads_buffer_mutex = threading.Lock()
-        self.last_t = []
-        self.last_w = []
-        self.last_y = []
-        self.last_u = []
-
-        self.plc = pyads.Connection('192.168.10.200.1.1', 352)
-        self.plc.open()
-        # symbols = self.plc.get_all_symbols()
-        # for sym in symbols:
-        #     print(sym)
-
-        self.ads_buffer_sps = self.plc.get_symbol("Object3 (RL_Learn_DirectControl).Output.ads_buffer", array_size=20)
-        attr = pyads.NotificationAttrib(length=sizeof(AdsBuffer), trans_mode=pyads.ADSTRANS_SERVERCYCLE, max_delay=1.0, cycle_time=5.0)
-        self.ads_buffer_sps.add_device_notification(self.update_obs, attr)
-
-        self.input_u = self.plc.get_symbol("Object3 (RL_Learn_DirectControl).Input.goal_torque")
-
-    def update_obs(self, notification, data):
-        _handle, _datetime, value = self.plc.parse_notification(
-            notification, self.ads_buffer_sps.plc_type
-        )
-
-        t = value[:BUFFER_SIZE]
-        w = value[BUFFER_SIZE:BUFFER_SIZE*2]
-        u = value[BUFFER_SIZE*2:BUFFER_SIZE*3]
-        y = value[BUFFER_SIZE*3:BUFFER_SIZE*4]
-
-        with self.ads_buffer_mutex:
-            if not self.last_t:
-                self.last_t = t
-                self.last_w = w
-                self.last_u = u
-                self.last_y = y
-
-            else:
-                # check witch data is new
-                is_new_timestamp = (np.array(t) - self.last_t[-1]) > 0
-                if is_new_timestamp.all():
-                    raise ValueError("Lost Step")
-                index_first_new_value = is_new_timestamp.tolist().index(1)
-                 # add new data to lists
-                self.last_t += t[index_first_new_value:]
-                self.last_w += w[index_first_new_value:]
-                self.last_u += u[index_first_new_value:]
-                self.last_y += y[index_first_new_value:]
-
-    def set_u(self, u):
-        self.input_u.write(u)
+    def reset(self):
+        if self.n_episodes != 0:
+            self.log_all.append(self.episode_log)
+        self.n_episodes += 1
 
 
-if __name__ == "__main__":
-    env = DirectControllerOnline()
+        self.episode_log["obs"]["last_set_points"] = []
+        self.episode_log["obs"]["last_system_inputs"] = []
+        self.episode_log["obs"]["last_system_outputs"] = []
+        self.episode_log["obs"]["errors"] = []
+        self.episode_log["obs"]["set_point"] = []
+        self.episode_log["obs"]["system_input"] = []
+        self.episode_log["obs"]["system_output"] = []
+        self.episode_log["obs"]["set_point_vel"] = []
+        self.episode_log["obs"]["input_vel"] = []
+        self.episode_log["obs"]["outputs_vel"] = []
+        self.episode_log["obs"]["integrated_error"] = []
+        self.episode_log["rewards"]["summed"] = []
+        self.episode_log["rewards"]["pen_error"] = []
+        self.episode_log["rewards"]["pen_action"] = []
+        self.episode_log["rewards"]["pen_error_integrated"] = []
+        self.episode_log["action"]["value"] = []
+        self.episode_log["action"]["change"] = []
+        self.episode_log["function"]["w"] = None
+        self.episode_log["function"]["y"] = None
 
-    for i in range(1):
-        print(i)
-        time.sleep(60)
+        self.create_obs()
+        return obs
 
-    with env.ads_buffer_mutex:
-        plt.plot(env.last_t, env.last_w)
-        plt.plot(env.last_t, env.last_u)
-        plt.plot(env.last_t, env.last_y)
-        plt.show()
+    def step(self, action):
+        return obs, reward, done, info
 
-    with env.ads_buffer_mutex:
-        plt.plot(env.last_t)
-        plt.show()
 
-    with env.ads_buffer_mutex:
-        plt.plot(env.last_t, env.last_w)
-        plt.plot(env.last_t, env.last_u)
-        plt.plot(env.last_t, env.last_y)
-        plt.show()
+    def create_reward(self):
+
+    def create_obs(self):
+        with self.online_system.ads_buffer_mutex:
+            w = copy.copy(self.online_system.last_w[-2:])
+            u = copy.copy(self.online_system.last_u[-2:])
+            y = copy.copy(self.online_system.last_y[-2:])
+
+        set_pont = w[-1]
+        set_point_vel = (w[-1] - w[-2]) * 1 / self.sample_freq
+        system_input = u[-1]
+        system_input_vel = (u[-1] - u[-2]) * 1 / self.sample_freq
+        system_output = y[-1]
+        system_output_vel = (y[-1] - y[-2]) * 1 / self.sample_freq
+
+        self.episode_log["obs"]["set_point"] = set_pont
+        self.episode_log["obs"]["system_input"] = system_input
+        self.episode_log["obs"]["system_output"] = system_output
+        self.episode_log["obs"]["set_point_vel"] = set_point_vel
+        self.episode_log["obs"]["input_vel"] = system_input_vel
+        self.episode_log["obs"]["outputs_vel"] = system_output_vel
+
+        obs = [set_pont, set_point_vel, system_input, system_input_vel, system_output, system_output_vel]
+        return obs
+
+
+    def render(self, mode="human"):
+        pass
