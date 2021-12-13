@@ -79,6 +79,4 @@ class CustomEvalCallback(BaseCallback):
             first_layer_weight = self.model.actor.mu._modules["0"].weight
             self.logger.output_formats[1].writer.add_histogram("test", first_layer_weight, self.n_calls)
 
-            self.logger.output_formats[1].writer.add_graph(self.model.actor.mu,
-                                                           th.Tensor([1] * 7).to(self.model.device))
         return True
