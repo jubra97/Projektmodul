@@ -25,24 +25,28 @@ class PIAdaptivePT2(gym.Env):
         self.w = []
         self.w_sensor = []
         self.integrated_error = 0
+        self.abs_integrated_error = 0
         self.log = log
+        self.n_episodes = 0
 
         self.episode_log = {"obs": {}, "rewards": {}, "action": {}, "function": {}}
         self.log_all = []
 
-        self.observation_space = gym.spaces.Box(low=np.array([-100]*9), high=np.array([100]*9),
-                                                shape=(9,),
+        self.observation_space = gym.spaces.Box(low=np.array([-100]*7), high=np.array([100]*7),
+                                                shape=(7,),
                                                 dtype=np.float32)
         self.action_space = gym.spaces.Box(low=np.array([-1]), high=np.array([1]), shape=(1,),
                                            dtype=np.float32)
 
     def reset(self, step_height=None, step_slope=None):
-        if len(self.episode_log["obs"]) != 0:
+        if self.n_episodes != 0:
             self.log_all.append(self.episode_log)
+        self.n_episodes += 1
 
         self.sim.reset()
         self.w, self.w_sensor = self.set_w(step_height, step_slope)
         self.integrated_error = 0
+        self.abs_integrated_error = 0
         self.last_system_inputs = deque([0] * 3, maxlen=3)
         self.last_system_outputs = deque([0] * 3, maxlen=3)
         self.last_set_points = deque([0] * 3, maxlen=3)
@@ -58,6 +62,7 @@ class PIAdaptivePT2(gym.Env):
             self.episode_log["obs"]["set_point_vel"] = []
             self.episode_log["obs"]["input_vel"] = []
             self.episode_log["obs"]["outputs_vel"] = []
+            self.episode_log["obs"]["integrated_error"] = []
             self.episode_log["rewards"]["summed"] = []
             self.episode_log["rewards"]["pen_error"] = []
             self.episode_log["rewards"]["pen_action"] = []
@@ -68,7 +73,7 @@ class PIAdaptivePT2(gym.Env):
             self.episode_log["function"]["y"] = None
 
 
-        obs = self._create_obs(first=True)
+        obs = self._create_obs_with_vel(first=True)
         return obs
 
     def set_w(self, step_height=None, step_slope=None):
@@ -83,7 +88,31 @@ class PIAdaptivePT2(gym.Env):
         w_sensor = w[::self.sim.model_steps_per_senor_update]
         return w, w_sensor
 
-    def _create_obs(self, first=False):
+    def _create_obs_with_vel(self, first=False):
+        set_points = np.array(list(self.last_set_points))
+        system_outputs = np.array(list(self.last_system_outputs))
+        system_inputs = np.array(list(self.last_system_inputs))
+
+        outputs_vel = (system_outputs[-2] - system_outputs[-1]) * 1/self.sim.sensor_steps_per_controller_update
+        input_vel = (system_inputs[-3] - system_inputs[-1]) * 1/self.sim.model_steps_per_controller_update
+        set_point_vel = (set_points[-2] - set_points[-1]) * 1/self.sim.sensor_steps_per_controller_update
+
+        if first:
+            obs = [set_points[-1], system_inputs[-1], system_outputs[-1], set_point_vel, input_vel, outputs_vel, self.integrated_error]
+        else:
+            obs = [set_points[-1], system_inputs[-1], system_outputs[-1], set_point_vel, input_vel, outputs_vel, self.integrated_error]
+
+        if self.log:
+            self.episode_log["obs"]["set_point"].append(set_points[-1])
+            self.episode_log["obs"]["system_input"].append(system_inputs[-1])
+            self.episode_log["obs"]["system_output"].append(system_outputs[-1])
+            self.episode_log["obs"]["set_point_vel"].append(set_point_vel)
+            self.episode_log["obs"]["input_vel"].append(input_vel)
+            self.episode_log["obs"]["outputs_vel"].append(outputs_vel)
+            self.episode_log["obs"]["integrated_error"].append(self.integrated_error)
+        return obs
+
+    def _create_obs_last_states(self, first=False):
         if first:
             obs = list(self.last_set_points) + list(self.last_system_inputs) + list(self.last_system_outputs)
         else:
@@ -95,19 +124,41 @@ class PIAdaptivePT2(gym.Env):
             self.episode_log["obs"]["last_system_outputs"].append(list(self.last_system_outputs))
         return obs
 
+    def _create_obs_last_errors(self, first=False):
+        set_points = np.array(list(self.last_set_points))
+        system_outputs = np.array(list(self.last_system_outputs))
+        errors = (set_points - system_outputs).tolist()
+
+        if first:
+            obs = errors + list(self.last_system_inputs) + [self.integrated_error]
+        else:
+            obs = errors + list(self.last_system_inputs) + [self.integrated_error]
+
+        if self.log:
+            self.episode_log["obs"]["errors"].append(errors)
+            self.episode_log["obs"]["last_system_inputs"].append(list(self.last_system_inputs))
+            self.episode_log["obs"]["integrated_error"].append(self.integrated_error)
+        return obs
+
     def _create_reward(self):
         y = np.array(list(self.last_system_outputs)[-self.sim.sensor_steps_per_controller_update:])
         w = np.array(list(self.last_set_points)[-self.sim.sensor_steps_per_controller_update:])
         e = np.mean(w - y)
         self.integrated_error = self.integrated_error + e * (1/self.sim.model_steps_per_controller_update)
-        self.integrated_error = np.clip(self.integrated_error, -20, 20)
+        self.integrated_error = np.clip(self.integrated_error, -0.3, 0.3)
+        self.abs_integrated_error = self.abs_integrated_error + abs(e) * (1/self.sim.model_steps_per_controller_update)
+        self.abs_integrated_error = np.clip(self.abs_integrated_error, 0, 20)
+
 
         pen_error = np.abs(e)
-        pen_error = pen_error * 1
+        pen_error = np.sqrt(pen_error) * 1
         pen_action = np.abs(list(self.last_system_inputs)[-(self.sim.sensor_steps_per_controller_update+1)]
-                               - list(self.last_system_inputs)[-self.sim.sensor_steps_per_controller_update]) * 0.1
-        pen_integrated = np.abs(self.integrated_error) * 0
-        reward = -pen_error - pen_action - pen_integrated
+                               - list(self.last_system_inputs)[-self.sim.sensor_steps_per_controller_update])
+        pen_action = np.sqrt(pen_action) * 0.1
+        pen_integrated = np.square(self.integrated_error) * 50
+
+        reward = pen_error + pen_action + pen_integrated
+        reward = -reward*5
 
         if self.log:
             self.episode_log["rewards"]["summed"].append(reward)
@@ -115,6 +166,42 @@ class PIAdaptivePT2(gym.Env):
             self.episode_log["rewards"]["pen_action"].append(-pen_action)
             self.episode_log["rewards"]["pen_error_integrated"].append(-pen_integrated)
 
+        return reward
+
+    def _create_reward_discrete(self):
+        y = np.array(list(self.last_system_outputs)[-self.sim.sensor_steps_per_controller_update:])
+        w = np.array(list(self.last_set_points)[-self.sim.sensor_steps_per_controller_update:])
+        e = np.mean(w - y)
+        self.integrated_error = self.integrated_error + e * (1/self.sim.model_steps_per_controller_update)
+        self.integrated_error = np.clip(self.integrated_error, -20, 20)
+        self.abs_integrated_error = self.abs_integrated_error + abs(e) * (1/self.sim.model_steps_per_controller_update)
+        self.abs_integrated_error = np.clip(self.abs_integrated_error, 0, 20)
+
+        pen_action = np.abs(list(self.last_system_inputs)[-(self.sim.sensor_steps_per_controller_update+1)]
+                               - list(self.last_system_inputs)[-self.sim.sensor_steps_per_controller_update])
+
+        pen_action = np.clip(pen_action, 0, 2) * 10
+
+        abs_error = np.abs(e)
+        reward = 0
+        if abs_error < 5:
+            reward += 1
+        if abs_error < 1:
+            reward += 2
+        if abs_error < 0.1:
+            reward += 5
+        if abs_error < 0.05:
+            reward += 10
+        if abs_error < 0.02:
+            reward += 15
+        if abs_error < 0.005:
+            reward += 20
+        reward -= pen_action + (abs_error * 0.2)
+
+        if self.log:
+            self.episode_log["rewards"]["summed"].append(reward)
+            self.episode_log["rewards"]["pen_action"].append(-pen_action)
+            self.episode_log["rewards"]["pen_error"].append(-abs_error * 0.2)
         return reward
 
 
@@ -152,7 +239,7 @@ class PIAdaptivePT2(gym.Env):
         else:
             done = False
 
-        obs = self._create_obs(first=False)
+        obs = self._create_obs_with_vel(first=False)
         reward = self._create_reward()
 
         return np.array(obs), reward, done, {}
@@ -194,4 +281,3 @@ class PIAdaptivePT2(gym.Env):
 
         fig.tight_layout()
         return fig
-
