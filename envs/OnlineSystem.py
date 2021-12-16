@@ -32,6 +32,10 @@ class OnlineSystem:
         self.last_y = []
         self.last_u = []
 
+        self.sample_freq = 5000  # Hz; get from sps
+
+        self.n_updates = 0
+
         self.plc = pyads.Connection('192.168.10.200.1.1', 352)
         self.plc.open()
         # symbols = self.plc.get_all_symbols()
@@ -43,6 +47,11 @@ class OnlineSystem:
         self.ads_buffer_sps.add_device_notification(self.update_obs, attr)
 
         self.input_u = self.plc.get_symbol("Object3 (RL_Learn_DirectControl).Input.goal_torque")
+        self.reset_trigger = self.plc.get_symbol("Object3 (RL_Learn_DirectControl).Input.In1")
+
+    def reset(self):
+        self.reset_trigger.write(1)
+        self.reset_trigger.write(0)
 
     def update_obs(self, notification, data):
         _handle, _datetime, value = self.plc.parse_notification(
@@ -53,6 +62,7 @@ class OnlineSystem:
         w = value[BUFFER_SIZE:BUFFER_SIZE*2]
         u = value[BUFFER_SIZE*2:BUFFER_SIZE*3]
         y = value[BUFFER_SIZE*3:BUFFER_SIZE*4]
+        self.n_updates += 1
 
         with self.ads_buffer_mutex:
             if not self.last_t:
@@ -66,7 +76,11 @@ class OnlineSystem:
                 is_new_timestamp = (np.array(t) - self.last_t[-1]) > 0
                 if is_new_timestamp.all():
                     raise ValueError("Lost Step")
-                index_first_new_value = is_new_timestamp.tolist().index(1)
+                try:
+                    index_first_new_value = is_new_timestamp.tolist().index(1)
+                except ValueError:
+                    print(t)
+                    print(self.last_t[-50:])
                  # add new data to lists
                 self.last_t += t[index_first_new_value:]
                 self.last_w += w[index_first_new_value:]
