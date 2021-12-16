@@ -39,7 +39,7 @@ class OnlineSystem:
         #     print(sym)
 
         self.ads_buffer_sps = self.plc.get_symbol("Object3 (RL_Learn_DirectControl).Output.ads_buffer", array_size=20)
-        attr = pyads.NotificationAttrib(length=sizeof(AdsBuffer), trans_mode=pyads.ADSTRANS_SERVERCYCLE, max_delay=1.0, cycle_time=5.0)
+        attr = pyads.NotificationAttrib(length=sizeof(AdsBuffer), trans_mode=pyads.ADSTRANS_SERVERCYCLE, max_delay=1.0, cycle_time=2.0)
         self.ads_buffer_sps.add_device_notification(self.update_obs, attr)
 
         self.input_u = self.plc.get_symbol("Object3 (RL_Learn_DirectControl).Input.goal_torque")
@@ -77,25 +77,40 @@ class OnlineSystem:
         self.input_u.write(u)
 
 
+
+
+
+
 if __name__ == "__main__":
-    env = DirectControllerOnline()
+    env = OnlineSystem()
 
-    for i in range(1):
-        print(i)
-        time.sleep(60)
+    for i in range(10):
+        print(i * 50)
+        env.set_u(i * 50)
+        time.sleep(2)
+    env.set_u(50)
+    time.sleep(2)
+    env.set_u(0)
+    time.sleep(2)
 
-    with env.ads_buffer_mutex:
-        plt.plot(env.last_t, env.last_w)
-        plt.plot(env.last_t, env.last_u)
-        plt.plot(env.last_t, env.last_y)
-        plt.show()
 
-    with env.ads_buffer_mutex:
-        plt.plot(env.last_t)
-        plt.show()
+
 
     with env.ads_buffer_mutex:
         plt.plot(env.last_t, env.last_w)
         plt.plot(env.last_t, env.last_u)
         plt.plot(env.last_t, env.last_y)
+        mean_y = [np.mean(env.last_y[i - 100:i]) if i > 100 else np.mean(env.last_y[0:i]) for i in
+                  range(1, len(env.last_y) + 1)]
+        plt.plot(env.last_t, mean_y)
         plt.show()
+
+    # with env.ads_buffer_mutex:
+    #     plt.plot(env.last_t)
+    #     plt.show()
+    #
+    # with env.ads_buffer_mutex:
+    #     plt.plot(env.last_t, env.last_w)
+    #     plt.plot(env.last_t, env.last_u)
+    #     plt.plot(env.last_t, env.last_y)
+    #     plt.show()
