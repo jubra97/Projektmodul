@@ -1,9 +1,17 @@
 import pickle
+import numpy as np
+from torch.utils.tensorboard import SummaryWriter
+import matplotlib.pyplot as plt
 
 from sysidentpy.neural_network import NARXNN
 from anarx_v2 import ANARX
 
 from datatools import load_data
+MODEL_NAME  = "ANARX_20_20"
+
+DATASET = "pt2.mat"
+
+writer = SummaryWriter(f"runs/{MODEL_NAME}")
 
 def train(net, data, epochs, learning_rate):
     net.learning_rate = learning_rate
@@ -14,11 +22,18 @@ def train(net, data, epochs, learning_rate):
     valid_dl = net.data_transform(u_valid, y_valid)
 
     net.fit(train_dl, valid_dl)
-MODEL_NAME  = "ANARX_20_20"
-DATASET = "pt2.mat"
-current_net = pickle.load(open(f"SysIdentPy/models/{MODEL_NAME}.p", "rb" ))
-train(current_net, "pt2.mat", 200, 0.00001)
+    net.net.global_epochs = net.net.global_epochs + epochs
+    writer.add_scalar('Loss/Train', net.train_loss[epochs-1], net.net.global_epochs)
+    writer.add_scalar('Loss/Val', net.val_loss[epochs-1], net.net.global_epochs)
+    fig = plt.figure()
+    ax = fig.add_axes([0,0,1,1])
+    ax.bar(np.arange(1,21), net.net.weights_by_lag.numpy())
+    writer.add_figure('Lags/Weights', fig, net.net.global_epochs)
 
+current_net = pickle.load(open(f"SysIdentPy/models/{MODEL_NAME}.p", "rb" ))
+for i in range(10):
+    train(current_net, "pt2.mat", 10, 0.0001)
+    
 if input("save? y/n\n") == "y":
     with open(f"SysIdentPy/models/{MODEL_NAME}.p", "wb") as f:
         pickle.dump(current_net, f)
