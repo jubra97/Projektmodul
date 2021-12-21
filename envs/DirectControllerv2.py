@@ -151,14 +151,14 @@ class DirectControllerPT2(gym.Env):
 
 
         pen_error = np.abs(e)
-        pen_error = np.sqrt(pen_error) * 1
+        pen_error = np.sqrt(pen_error) * 15
         pen_action = np.abs(list(self.last_system_inputs)[-(self.sim.sensor_steps_per_controller_update+1)]
                                - list(self.last_system_inputs)[-self.sim.sensor_steps_per_controller_update])
-        pen_action = np.sqrt(pen_action) * 0.1
-        pen_integrated = np.square(self.integrated_error) * 50
+        pen_action = np.sqrt(pen_action) * 1
+        pen_integrated = np.square(self.integrated_error) * 0
 
         reward = pen_error + pen_action + pen_integrated
-        reward = -reward*5
+        reward = -reward
 
         if self.log:
             self.episode_log["rewards"]["summed"].append(reward)
@@ -178,9 +178,9 @@ class DirectControllerPT2(gym.Env):
         self.abs_integrated_error = np.clip(self.abs_integrated_error, 0, 20)
 
         pen_action = np.abs(list(self.last_system_inputs)[-(self.sim.sensor_steps_per_controller_update+1)]
-                               - list(self.last_system_inputs)[-self.sim.sensor_steps_per_controller_update])
+                               - list(self.last_system_inputs)[-self.sim.sensor_steps_per_controller_update]) * 2
 
-        pen_action = np.clip(pen_action, 0, 2) * 10
+        pen_action = np.clip(pen_action, 0, 4)
 
         abs_error = np.abs(e)
         reward = 0
@@ -233,7 +233,7 @@ class DirectControllerPT2(gym.Env):
             done = False
 
         obs = self._create_obs_with_vel(first=False)
-        reward = self._create_reward()
+        reward = self._create_reward_discrete()
 
         return np.array(obs), reward, done, {}
 

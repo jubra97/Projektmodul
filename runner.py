@@ -51,7 +51,7 @@ for actor_net in [[4, 4]]:
         for af, af_name in zip([th.nn.Tanh], ["TanH"]):
 
             # for action_noise in [0.3, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.003, 0.001, 0.0001, 0]:
-            RUN_NAME = f"obs_with_vel_diff-actor_net_{actor_net}_critic_net_{critic_net}_activation_fn_{af_name}_test"
+            RUN_NAME = f"obs_with_vel_diff-actor_net_{actor_net}_critic_net_{critic_net}_activation_fn_{af_name}_test_discrete_reward2"
 
             # create DmsSim Gym Env
             env = DirectControllerPT2()
@@ -84,10 +84,10 @@ for actor_net in [[4, 4]]:
                          learning_starts=3000,
                          verbose=2,
                          action_noise=action_noise,
-                         tensorboard_log="./test/",
+                         tensorboard_log="./Meeting_Fabian/",
                          policy_kwargs=policy_kwargs,
                          )
-            model.learn(total_timesteps=50_000, tb_log_name=f"test", callback=callbacks)
+            model.learn(total_timesteps=50_000, tb_log_name=f"normal_reward_discrete_reward2", callback=callbacks)
             utils.eval(DirectControllerPT2(log=True), model, folder_name=RUN_NAME)
             # #
             # # # save model if you want to

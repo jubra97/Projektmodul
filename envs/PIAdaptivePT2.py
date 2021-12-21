@@ -10,7 +10,7 @@ from envs.TfSim import TfSim
 
 class PIAdaptivePT2(gym.Env):
 
-    def __init__(self, oscillating=True, log=False):
+    def __init__(self, oscillating=False, log=False):
         super(PIAdaptivePT2, self).__init__()
         if oscillating:
             self.open_loop_sys = control.tf([1], [0.001, 0.005, 1])
@@ -219,12 +219,21 @@ class PIAdaptivePT2(gym.Env):
         # close loop with pi controller with given parameters
         pi_controller = control.tf([controller_p, controller_i], [1, 0])
         open_loop = control.series(pi_controller, self.open_loop_sys)
+
+        # pi = control.LinearIOSystem(control.tf2ss(pi_controller))
+        # open_l = control.LinearIOSystem(control.tf2ss(open_loop))
+        # print(open_loop)
+        # closed_loop = control.interconnect(
+        #                                     [open_l, pi], name='system',
+        #                                     connections=[['pi.e', '-open_l.y']],
+        #                                     inplist=['pi.e'], inputs='r',
+        #                                     outlist=['open_l.y'], outputs='y')
+        # print(closed_loop)
         closed_loop = control.feedback(open_loop, 1, -1)
         # set sim sys
         self.sim.sys = control.tf2ss(closed_loop)
 
-
-        self.sim.sim_one_step(u=self.w[self.sim.current_simulation_step:self.sim.current_simulation_step+self.sim.model_steps_per_controller_update+1])
+        self.sim.sim_one_step_closed_loop(w=self.w[self.sim.current_simulation_step:self.sim.current_simulation_step+self.sim.model_steps_per_controller_update+1])
 
         for step in range(self.sim.sensor_steps_per_controller_update, 0, -1):
             self.last_system_inputs.append(controller_p)
