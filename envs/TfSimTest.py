@@ -26,7 +26,7 @@ class TfSim:
         self.sensor_steps_per_controller_update = int(self.sensor_freq / self.controller_freq)
         self.simulation_time = simulation_time
         self.n_sample_points = int(model_freq * simulation_time)
-        self.t = np.linspace(0.00000000000000000000000001, simulation_time, self.n_sample_points)
+        self.t = np.linspace(1e-200, simulation_time, self.n_sample_points)
 
         self.current_simulation_time = 0
         self.current_simulation_step = 0

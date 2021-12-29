@@ -25,7 +25,8 @@ controller_i = 0
 
 plant = control.tf2ss(control.tf([1], [0.001, 0.05, 1]))
 pi_controller = control.tf2ss(control.tf([controller_p, controller_i], [1, 0]))
-t = np.linspace(0.000000000000000000000000000000001, 1.5, 15000)
+t = np.linspace(1e-200, 1.5, 15000)
+print(t[0:3])
 u = [0] * 5000 + [1] * 10000
 noise = np.random.normal(0, 0.00, 15000)
 
