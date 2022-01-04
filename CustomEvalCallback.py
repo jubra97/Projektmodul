@@ -46,11 +46,11 @@ class CustomEvalCallback(BaseCallback):
 
         self.eval_env = eval_env
 
-    def _init_callback(self):
-        print(type(self.model.actor))
-        import torch as th
-        self.logger.output_formats[1].writer.add_graph(self.model.actor.mu, th.Tensor([1] * 7).to(self.model.device))
-        print("A")
+    # def _init_callback(self):
+    #     print(type(self.model.actor))
+    #     import torch as th
+    #     self.logger.output_formats[1].writer.add_graph(self.model.actor.mu, th.Tensor([1] * 7).to(self.model.device))
+    #     print("A")
     #     # import torch.nn as nn
     #     # def init_with_zero(m):
     #     #     if type(m) == nn.Linear:
