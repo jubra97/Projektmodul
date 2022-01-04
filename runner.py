@@ -9,7 +9,6 @@ from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3 import DDPG, TD3
 from stable_baselines3.common.callbacks import CallbackList
 # from envs.DirectControllerv2 import DirectControllerPT2
-from envs.DirectControllerv2 import DirectControllerPT2
 from envs.PIAdaptivePT2 import PIAdaptivePT2
 from tensorboard_logger import TensorboardCallback
 import matplotlib.pyplot as plt
@@ -18,7 +17,7 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import VecCheckNan, DummyVecEnv
 import torch as th
 import utils
-from envs.DirectControllerOnline import DirectControllerOnline
+# from envs.DirectControllerOnline import DirectControllerOnline
 
 def linear_schedule(initial_value: float=1e-3) -> Callable[[float], float]:
     """
@@ -55,25 +54,21 @@ for actor_net in [[20, 20]]:
             RUN_NAME = f"obs_with_vel_diff-actor_net_{actor_net}_critic_net_{critic_net}_activation_fn_{af_name}_test"
 
             # create DmsSim Gym Env
-            env = DirectControllerOnline()
+            env = PIAdaptivePT2()
             env = Monitor(env)
 
-            # online_eval_env = DirectControllerPT2(log=True)
-            # online_eval_env = Monitor(online_eval_env)
-            # env = VecCheckNan(env)
-
-            # env = DummyVecEnv([lambda: DirectControllerPT2()])
-            # env = VecCheckNan(env, raise_exception=True)
+            online_eval_env = PIAdaptivePT2(log=True)
+            online_eval_env = Monitor(online_eval_env)
 
             # create action noise
             n_actions = env.action_space.shape[-1]
             action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.1) * np.ones(n_actions))
 
             # create eval callback
-            # eval_callback = CustomEvalCallback(online_eval_env, eval_freq=5000, deterministic=True)
+            eval_callback = CustomEvalCallback(online_eval_env, eval_freq=5000, deterministic=True)
 
             # create callback list
-            # callbacks = CallbackList([eval_callback])
+            callbacks = CallbackList([eval_callback])
 
             # # use DDPG and create a tensorboard
             # # start tensorboard server with tensorboard --logdir ./dmsSim_ddpg_tensorboard/
@@ -89,7 +84,7 @@ for actor_net in [[20, 20]]:
                          policy_kwargs=policy_kwargs,
                          )
             model.learn(total_timesteps=50_000, tb_log_name=f"test", callback=callbacks)
-            utils.eval(DirectControllerPT2(log=True), model, folder_name=RUN_NAME)
+            utils.eval(PIAdaptivePT2(log=True), model, folder_name=RUN_NAME)
             # #
             # # # save model if you want to
             model.save(f"eval\\{RUN_NAME}\\model")
