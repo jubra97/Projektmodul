@@ -83,7 +83,8 @@ def eval(env, model, folder_name):
             plt.savefig(f"eval\\{folder_name}\\{i}_{step}_{slope}.png")
             plt.close()
             i += 1
-            rmse_episode = np.square(np.array(env.w) - np.array(env.sim._sim_out))
+            # rmse_episode = np.square(np.array(env.w) - np.array(env.sim._sim_out))
+            rmse_episode = np.square(np.array(env.w[0, :]) - np.array(env.sim._sim_out[1, :]))
             rmse.append(rmse_episode)
     mean_episode_reward = np.sum(rewards)/env.n_episodes
     extra_info["mean_episode_reward"] = mean_episode_reward
