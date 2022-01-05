@@ -86,7 +86,7 @@ for actor_net in [[20, 20]]:
                          tensorboard_log="./pi_online_first_test/",
                          policy_kwargs=policy_kwargs,
                          )
-            model.learn(total_timesteps=100_000, tb_log_name=f"pi_online_first_test", callback=callbacks)
+            model.learn(total_timesteps=100_000, tb_log_name=f"pi_online_first_test", callback=callbacks, log_interval=1)
             # utils.eval(PIControllerOnline(log=True), model, folder_name=RUN_NAME)
             # #
             # # # save model if you want to
