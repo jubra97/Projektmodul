@@ -8,16 +8,18 @@ import matplotlib.pyplot as plt
 
 class PIControllerOnline(gym.Env):
 
-    def __init__(self, sample_freq=5000, log=True):
+    def __init__(self, online_sys=None, sample_freq=5000, log=True):
         super(PIControllerOnline).__init__()
 
-        self.online_system = OnlineSystemPI()
+        self.online_system = online_sys
 
         self.episode_log = {"obs": {}, "rewards": {}, "action": {}, "function": {}}
         self.log_all = []
         self.n_episodes = 0
+        self.timesteps_last_episode = 0
         self.sample_freq = sample_freq
         self.log = log
+        self.online_sys_needs_reset = True
 
         self.t = []
         self.w = []
@@ -40,6 +42,10 @@ class PIControllerOnline(gym.Env):
                                            dtype=np.float32)
 
     def reset(self):
+        ###
+        # Reset is done after final step and before learning. Reset is not called after learning!
+        ###
+
         if self.last_reset_call is not None:
             print(time.perf_counter() - self.last_reset_call)
         self.last_reset_call = time.perf_counter()
@@ -47,9 +53,12 @@ class PIControllerOnline(gym.Env):
         if self.n_episodes != 0:
             self.log_all.append(self.episode_log)
         self.n_episodes += 1
-        print(self.n_episodes)
+        print(f"Episode: {self.n_episodes}")
+        print(f"Timesteps: {self.timesteps_last_episode}")
+        self.online_sys_needs_reset = True
 
-        self.online_system.reset()
+        self.timesteps_last_episode = 0
+        self.online_system.set_pi(0, 0)  # reset p and i
 
         self.integrated_error = 0
         self.abs_integrated_error = 0
@@ -74,20 +83,24 @@ class PIControllerOnline(gym.Env):
         return obs
 
     def step(self, action):
+        if self.online_sys_needs_reset:
+            self.online_system.reset()
+            self.online_sys_needs_reset = False
+
+        self.timesteps_last_episode += 1
 
         if self.last_step_time:
-            while time.perf_counter() - self.last_step_time < 0.004:
+            while time.perf_counter() - self.last_step_time < 0.005:
                 ...
-                time.sleep(0.00001)
+                # time.sleep(0.00001)
             # print(time.perf_counter() - self.last_step_time)
         self.last_step_time = time.perf_counter()
 
+        p = (action[0] + 1.00001) * 1.9 + 0.1
+        p = np.clip(p, 0.1, 4)
 
-        p = (action[0] + 1) * 1.9 + 0.1
-        p = np.clip(p, 0.1, 2)
-
-        i = (action[1] + 1) * 0.25
-        i = np.clip(p, 0, 0.5)
+        i = (action[1] + 1.00001) * 0.25
+        i = np.clip(i, 0, 0.0)
 
         self.update_input()
         obs = self.create_obs()
@@ -124,6 +137,9 @@ class PIControllerOnline(gym.Env):
         self.integrated_error = np.clip(self.integrated_error, -0.3, 0.3)
         self.abs_integrated_error = self.abs_integrated_error + abs(e) * (1/self.online_system.sample_freq)
         self.abs_integrated_error = np.clip(self.abs_integrated_error, 0, 20)
+
+        if not self.u:
+            return 0
 
         u_change = np.mean(np.diff(u))
 

@@ -6,9 +6,13 @@ from stable_baselines3 import DDPG, TD3
 from stable_baselines3.common.callbacks import CallbackList
 from CustomEvalCallback import CustomEvalCallback
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import VecCheckNan, DummyVecEnv
+from stable_baselines3.common.env_util import make_vec_env
 import torch as th
 import utils
 from envs.PIControllerOnline import PIControllerOnline
+from envs.OnlineSystemPI import OnlineSystemPI
+
 
 def linear_schedule(initial_value: float=1e-3) -> Callable[[float], float]:
     """
@@ -41,14 +45,22 @@ for actor_net in [[20, 20]]:
     for critic_net in [[200, 200]]:
         for af, af_name in zip([th.nn.Tanh], ["TanH"]):
 
+
+            online_connection = OnlineSystemPI()
             # for action_noise in [0.3, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.003, 0.001, 0.0001, 0]:
             RUN_NAME = f"pi_online_first_test"
 
-            # create DmsSim Gym Env
-            env = PIControllerOnline()
-            env = Monitor(env)
 
-            online_eval_env = PIControllerOnline(log=True)
+            env = make_vec_env(PIControllerOnline, env_kwargs={"online_sys": online_connection})
+
+
+            # create DmsSim Gym Env
+            # env = PIControllerOnline
+            # # env = Monitor(env)
+            # env = DummyVecEnv([env])
+            env = VecCheckNan(env)
+
+            online_eval_env = PIControllerOnline(online_connection, log=True)
             online_eval_env = Monitor(online_eval_env)
 
             # create action noise
@@ -56,7 +68,7 @@ for actor_net in [[20, 20]]:
             action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.05) * np.ones(n_actions))
 
             # create eval callback
-            eval_callback = CustomEvalCallback(online_eval_env, eval_freq=5000, deterministic=True)
+            eval_callback = CustomEvalCallback(online_eval_env, eval_freq=12000, deterministic=True)
 
             # create callback list
             callbacks = CallbackList([eval_callback])
@@ -68,13 +80,13 @@ for actor_net in [[20, 20]]:
 
             model = DDPG(MlpPolicy,
                          env,
-                         learning_starts=3000,
+                         learning_starts=4000,
                          verbose=2,
                          action_noise=action_noise,
                          tensorboard_log="./pi_online_first_test/",
                          policy_kwargs=policy_kwargs,
                          )
-            model.learn(total_timesteps=100_000, tb_log_name=f"pi_online_first_test")#, callback=callbacks)
+            model.learn(total_timesteps=100_000, tb_log_name=f"pi_online_first_test", callback=callbacks)
             # utils.eval(PIControllerOnline(log=True), model, folder_name=RUN_NAME)
             # #
             # # # save model if you want to

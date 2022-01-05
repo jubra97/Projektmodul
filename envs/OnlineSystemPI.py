@@ -54,6 +54,7 @@ class OnlineSystemPI:
         self.reset_trigger = self.plc.get_symbol("Object4 (RL_Learn_PIControl).Input.In1")
 
     def reset(self):
+        print("reset called")
         self.reset_triggered = True
         with self.ads_buffer_mutex:
             if self.last_t:
@@ -121,16 +122,16 @@ class OnlineSystemPI:
 if __name__ == "__main__":
     env = OnlineSystemPI()
 
-    for i in range(50):
+    for i in range(20):
         env.reset()
         # print(i * 50)
         # env.set_pi(0.3 * i, 0.1 * i)
-        time.sleep(30)
+        time.sleep(10)
     for run in env.last_runs:
         print(run["t"][0])
 
     df = pd.DataFrame(env.last_runs)
-    df.to_pickle("online_test_data.pkl")
+    df.to_pickle("steps_pt2.pkl")
     print(df)
     # env.set_u(50)
     # time.sleep(2)

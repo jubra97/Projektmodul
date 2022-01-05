@@ -43,7 +43,7 @@ class CustomEvalCallback(BaseCallback):
         self.n_eval_episodes = n_eval_episodes
         self.eval_freq = eval_freq
         self.deterministic = deterministic
-
+        self.evaluate = False
         self.eval_env = eval_env
 
     # def _init_callback(self):
@@ -63,9 +63,29 @@ class CustomEvalCallback(BaseCallback):
     def _on_step(self) -> bool:
 
         if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
-            # crete eval env
-            print("Start Log")
+            self.evaluate = True
+        #     # crete eval env
+        #     print("Start Log")
+        #
+        #     ob = self.eval_env.reset()
+        #     done = False
+        #     while done is not True:
+        #         action, _states = self.model.predict(ob, deterministic=self.deterministic)
+        #         ob, reward, done, info = self.eval_env.step(action)
+        #
+        #     print(f"Logging Image Call Nr: {self.n_calls}")
+        #     fig = self.eval_env.create_eval_plot()
+        #     self.logger.record("Overview/A", Figure(fig, close=True), exclude=("stdout", "log", "json", "csv"))
+        #     plt.close()
+        #     # first_layer_weight = self.model.actor.mu._modules["0"].weight
+        #     # self.logger.output_formats[1].writer.add_histogram("test", first_layer_weight, self.n_calls)
 
+        return True
+
+
+    def _on_rollout_end(self) -> None:
+        if self.evaluate:
+            self.evaluate = False
             ob = self.eval_env.reset()
             done = False
             while done is not True:
@@ -76,7 +96,5 @@ class CustomEvalCallback(BaseCallback):
             fig = self.eval_env.create_eval_plot()
             self.logger.record("Overview/A", Figure(fig, close=True), exclude=("stdout", "log", "json", "csv"))
             plt.close()
-            first_layer_weight = self.model.actor.mu._modules["0"].weight
-            self.logger.output_formats[1].writer.add_histogram("test", first_layer_weight, self.n_calls)
-
-        return True
+            # first_layer_weight = self.model.actor.mu._modules["0"].weight
+            # self.logger.output_formats[1].writer.add_histogram("test", first_layer_weight, self.n_calls)
