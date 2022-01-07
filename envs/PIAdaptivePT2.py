@@ -18,7 +18,7 @@ class PIAdaptivePT2(gym.Env):
             self.open_loop_sys = control.tf([1], [0.001, 0.05, 1])
 
         self.open_loop_sys = control.tf2ss(self.open_loop_sys)
-        self.sim = IOSim(None, 10_000, 200, 100, 1.5)
+        self.sim = IOSim(None, 4_000, 200, 100, 1.5)
 
         self.last_ps = deque([0] * 3, maxlen=3)
         self.last_is = deque([0] * 3, maxlen=3)
@@ -95,9 +95,9 @@ class PIAdaptivePT2(gym.Env):
         w = w_before_step + w_step + w_after_step
 
         if add_noise:
-            noise = np.random.normal(0, 0.001, 15_000)
+            noise = np.random.normal(0, 0.001, 6_000)
         else:
-            noise = [0] * 15_000
+            noise = [0] * 6_000
 
         sys_input = np.array([w, noise])
 
@@ -254,7 +254,7 @@ class PIAdaptivePT2(gym.Env):
 
         pen_error = np.abs(e)
         pen_error = (pen_error) * 1
-        pen_u_change = u_change * 0.01
+        pen_u_change = u_change * 0.05
         pen_integrated = np.square(self.integrated_error) * 0
 
         reward = - pen_error - pen_u_change
@@ -263,7 +263,7 @@ class PIAdaptivePT2(gym.Env):
             self.episode_log["rewards"]["summed"].append(reward)
             self.episode_log["rewards"]["pen_error"].append(-pen_error)
             self.episode_log["rewards"]["u_change"].append(-pen_u_change)
-            self.episode_log["rewards"]["pen_error_integrated"].append(u[-1])
+            # self.episode_log["rewards"]["pen_error_integrated"].append(u[-1])
 
         return reward
 
