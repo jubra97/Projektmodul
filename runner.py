@@ -18,9 +18,10 @@ af = th.nn.Tanh
 # TODO: Which observation should be used?
 
 if __name__ == "__main__":
-    RUN_NAME = f"Run"
 
-    env = make_vec_env(DirectControllerPT2, 2, vec_env_cls=SubprocVecEnv)  # create learning env
+    RUN_NAME = f"RUN"
+
+    env = make_vec_env(DirectControllerPT2, 3, vec_env_cls=SubprocVecEnv)  # create learning env
 
     # create action noise
     n_actions = env.action_space.shape[-1]

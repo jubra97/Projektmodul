@@ -9,7 +9,7 @@ model = DDPG.load(r"C:\AktiveProjekte\Python\Projektmodul\eval_final\reward_func
 env = DirectControllerPT2(log=True)
 
 t = np.linspace(0, 1.5, 15000)
-sine = np.sin(2 * np.pi * 4 * t)
+sine = np.sin(2 * np.pi * 4 * t + np.pi/2)
 
 obs = env.reset(custom_w=sine)
 done = False

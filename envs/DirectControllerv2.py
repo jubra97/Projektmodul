@@ -13,7 +13,8 @@ from envs.TfSim import TfSim
 
 class DirectControllerPT2(gym.Env):
 
-    def __init__(self, oscillating=False, log=False, reward_function="discrete", oscillation_pen_gain=1,
+    def __init__(self, oscillating=True, log=False, reward_function="discrete", observation_function="obs_with_vel",
+                 oscillation_pen_gain=1,
                  oscillation_pen_fun=np.sqrt, error_pen_fun=None):
         """
         Create a gym environment to directly control the actuating value (u) of a system.
@@ -26,6 +27,8 @@ class DirectControllerPT2(gym.Env):
         else:
             sys = control.tf([1], [0.001, 0.05, 1])
 
+        # sys = control.tf([3.55e3], [0.00003, 0.0014, 1])
+
         # input_lag = control.tf([1], [0.0001, 0.01, 1])
         # sys = control.series(input_lag, sys)
 
@@ -36,8 +39,23 @@ class DirectControllerPT2(gym.Env):
         elif reward_function == "normal":
             self.reward_function = self._create_reward
         else:
-            raise ValueError("No corresponding reward function could be found. If you want to add your own reward"
-                             "function add the function to this if else block.")
+            raise ValueError(
+                "No corresponding reward function could be found. If you want to add your own reward function add the"
+                " function to this if else block.")
+
+        if observation_function == "obs_with_vel":
+            self.observation_function = self._create_obs_with_vel
+        elif observation_function == "last_states":
+            self.observation_function = self._create_obs_last_states
+        elif observation_function == "error_with_vel":
+            self.observation_function = self._create_obs_errors_with_vel
+        elif observation_function == "last_errors":
+            self.observation_function = self._create_obs_last_errors
+        else:
+            raise ValueError(
+                "No corresponding observation function could be found. If you want to add your own observation"
+                "function add the function to this if else block.")
+
         self.oscillation_pen_gain = oscillation_pen_gain
         self.oscillation_pen_fun = oscillation_pen_fun
         self.error_pen_fun = error_pen_fun
@@ -47,7 +65,6 @@ class DirectControllerPT2(gym.Env):
         self.last_set_points = deque([0] * 3, maxlen=3)
 
         self.w = []
-        self.integrated_error = 0
 
         # create variables for logging
         self.episode_log = {"obs": {}, "rewards": {}, "action": {}, "function": {}}
@@ -56,9 +73,12 @@ class DirectControllerPT2(gym.Env):
         self.log_all = []
 
         # define size of observation and action space
-        self.observation_space = gym.spaces.Box(low=np.array([-100] * 7, dtype=np.float32),
-                                                high=np.array([100] * 7, dtype=np.float32),
-                                                shape=(7,),
+        test_obs = self.reset()
+        obs_size = test_obs.shape[0]
+
+        self.observation_space = gym.spaces.Box(low=np.array([-100] * obs_size, dtype=np.float32),
+                                                high=np.array([100] * obs_size, dtype=np.float32),
+                                                shape=(obs_size,),
                                                 dtype=np.float32)
         self.action_space = gym.spaces.Box(low=np.array([-1], dtype=np.float32),
                                            high=np.array([1], dtype=np.float32),
@@ -94,31 +114,30 @@ class DirectControllerPT2(gym.Env):
         self.last_system_inputs = deque([0] * 3, maxlen=3)
         self.last_system_outputs = deque([0] * 3, maxlen=3)
         self.last_set_points = deque([0] * 3, maxlen=3)
-        self.integrated_error = 0
 
         if self.log:
             self.episode_log["obs"]["last_set_points"] = []
             self.episode_log["obs"]["last_system_inputs"] = []
             self.episode_log["obs"]["last_system_outputs"] = []
             self.episode_log["obs"]["errors"] = []
+            self.episode_log["obs"]["error"] = []
+            self.episode_log["obs"]["error_vel"] = []
             self.episode_log["obs"]["set_point"] = []
             self.episode_log["obs"]["system_input"] = []
             self.episode_log["obs"]["system_output"] = []
             self.episode_log["obs"]["set_point_vel"] = []
             self.episode_log["obs"]["input_vel"] = []
             self.episode_log["obs"]["outputs_vel"] = []
-            self.episode_log["obs"]["integrated_error"] = []
             self.episode_log["rewards"]["summed"] = []
             self.episode_log["rewards"]["pen_error"] = []
             self.episode_log["rewards"]["pen_action"] = []
-            self.episode_log["rewards"]["pen_error_integrated"] = []
             self.episode_log["action"]["value"] = []
             self.episode_log["action"]["change"] = []
             self.episode_log["function"]["w"] = None
             self.episode_log["function"]["y"] = None
 
         # create start observation of new episode
-        obs = self._create_obs_with_vel(first=True)
+        obs = self.observation_function(first=True)
         return obs
 
     def set_w(self, step_height=None, step_slope=None):
@@ -139,6 +158,11 @@ class DirectControllerPT2(gym.Env):
         return w
 
     def _create_obs_with_vel(self, first=False):
+        """
+        Create observation consisting of: set point (w), system output (y), system input (u) and their derivations.
+        :param first: True if first call in an episode (normally in reset()).
+        :return:
+        """
         set_points = np.array(list(self.last_set_points))
         system_outputs = np.array(list(self.last_system_outputs))
         system_inputs = np.array(list(self.last_system_inputs))
@@ -148,49 +172,83 @@ class DirectControllerPT2(gym.Env):
         set_point_vel = (set_points[-2] - set_points[-1]) * 1 / self.sim.sensor_steps_per_controller_update
 
         if first:
-            obs = [set_points[-1], system_inputs[-1], system_outputs[-1], set_point_vel, input_vel, outputs_vel,
-                   self.integrated_error]
+            obs = [self.w[0], system_inputs[-1], system_outputs[-1], set_point_vel, input_vel, outputs_vel]
         else:
-            obs = [set_points[-1], system_inputs[-1], system_outputs[-1], set_point_vel, input_vel, outputs_vel,
-                   self.integrated_error]
+            obs = [set_points[-1], system_inputs[-1], system_outputs[-1], set_point_vel, input_vel, outputs_vel]
 
         if self.log:
-            self.episode_log["obs"]["set_point"].append(set_points[-1])
-            self.episode_log["obs"]["system_input"].append(system_inputs[-1])
-            self.episode_log["obs"]["system_output"].append(system_outputs[-1])
-            self.episode_log["obs"]["set_point_vel"].append(set_point_vel)
-            self.episode_log["obs"]["input_vel"].append(input_vel)
-            self.episode_log["obs"]["outputs_vel"].append(outputs_vel)
-            self.episode_log["obs"]["integrated_error"].append(self.integrated_error)
-        return obs
+            self.episode_log["obs"]["set_point"].append(obs[0])
+            self.episode_log["obs"]["system_input"].append(obs[1])
+            self.episode_log["obs"]["system_output"].append(obs[2])
+            self.episode_log["obs"]["set_point_vel"].append(obs[3])
+            self.episode_log["obs"]["input_vel"].append(obs[4])
+            self.episode_log["obs"]["outputs_vel"].append(obs[5])
+        return np.array(obs)
 
     def _create_obs_last_states(self, first=False):
+        """
+        Create observation consisting of: last 3 set points (w), last 3 system outputs (y), last 3 system inputs (u).
+        :param first: True if first call in an episode (normally in reset()).
+        :return:
+        """
         if first:
-            obs = list(self.last_set_points) + list(self.last_system_inputs) + list(self.last_system_outputs)
+            obs = [self.w[0]] * len(list(self.last_set_points)) + list(self.last_system_inputs) + list(
+                self.last_system_outputs)
         else:
             obs = list(self.last_set_points) + list(self.last_system_inputs) + list(self.last_system_outputs)
 
         if self.log:
-            self.episode_log["obs"]["last_set_points"].append(list(self.last_set_points))
-            self.episode_log["obs"]["last_system_inputs"].append(list(self.last_system_inputs))
-            self.episode_log["obs"]["last_system_outputs"].append(list(self.last_system_outputs))
-        return obs
+            self.episode_log["obs"]["last_set_points"].append(list(obs[0:3]))
+            self.episode_log["obs"]["last_system_inputs"].append(list(obs[3:6]))
+            self.episode_log["obs"]["last_system_outputs"].append(list(obs[6:9]))
+        return np.array(obs)
+
+    def _create_obs_errors_with_vel(self, first=False):
+        """
+        Create observation consisting of: system error (e), system input (u) and their derivations.
+        :param first: True if first call in an episode (normally in reset()).
+        :return:
+        """
+        set_points = np.array(list(self.last_set_points))
+        system_outputs = np.array(list(self.last_system_outputs))
+        system_inputs = np.array(list(self.last_system_inputs))
+        errors = (set_points - system_outputs).tolist()
+
+        error_vel = (errors[-2] - errors[-1]) * 1 / self.sim.sensor_steps_per_controller_update
+        input_vel = (system_inputs[-3] - system_inputs[-1]) * 1 / self.sim.model_steps_per_controller_update
+
+        if first:
+            error = self.w[0] - system_outputs[-1]
+            obs = [error, system_inputs[-1], error_vel, input_vel]
+        else:
+            obs = [errors[0], system_inputs[-1], error_vel, input_vel]
+
+        if self.log:
+            self.episode_log["obs"]["error"].append(obs[0])
+            self.episode_log["obs"]["system_input"].append(obs[1])
+            self.episode_log["obs"]["error_vel"].append(obs[2])
+            self.episode_log["obs"]["input_vel"].append(obs[3])
+        return np.array(obs)
 
     def _create_obs_last_errors(self, first=False):
+        """
+        Create observation consisting of: last 3 system errors (e), last 3 system inputs (u).
+        :param first: True if first call in an episode (normally in reset()).
+        :return:
+        """
         set_points = np.array(list(self.last_set_points))
         system_outputs = np.array(list(self.last_system_outputs))
         errors = (set_points - system_outputs).tolist()
 
         if first:
-            obs = errors + list(self.last_system_inputs) + [self.integrated_error]
+            obs = errors + list(self.last_system_inputs)
         else:
-            obs = errors + list(self.last_system_inputs) + [self.integrated_error]
+            obs = errors + list(self.last_system_inputs)
 
         if self.log:
-            self.episode_log["obs"]["errors"].append(errors)
-            self.episode_log["obs"]["last_system_inputs"].append(list(self.last_system_inputs))
-            self.episode_log["obs"]["integrated_error"].append(self.integrated_error)
-        return obs
+            self.episode_log["obs"]["errors"].append(obs[0:3])
+            self.episode_log["obs"]["last_system_inputs"].append(obs[3:6])
+        return np.array(obs)
 
     def _create_reward(self):
         """
@@ -202,8 +260,6 @@ class DirectControllerPT2(gym.Env):
         y = np.array(list(self.last_system_outputs)[-self.sim.sensor_steps_per_controller_update:])
         w = np.array(list(self.last_set_points)[-self.sim.sensor_steps_per_controller_update:])
         e = np.mean(w - y)
-        self.integrated_error = self.integrated_error + e * (1 / self.sim.model_steps_per_controller_update)
-        self.integrated_error = np.clip(self.integrated_error, -0.3, 0.3)
 
         # calculate action change
         action_change = self.last_system_inputs[-(self.sim.sensor_steps_per_controller_update + 1)] \
@@ -221,7 +277,6 @@ class DirectControllerPT2(gym.Env):
             self.episode_log["rewards"]["summed"].append(reward)
             self.episode_log["rewards"]["pen_error"].append(-pen_error)
             self.episode_log["rewards"]["pen_action"].append(-pen_action)
-            # self.episode_log["rewards"]["pen_error_integrated"].append(-pen_integrated)
 
         return reward
 
@@ -230,8 +285,6 @@ class DirectControllerPT2(gym.Env):
         y = np.array(list(self.last_system_outputs)[-self.sim.sensor_steps_per_controller_update:])
         w = np.array(list(self.last_set_points)[-self.sim.sensor_steps_per_controller_update:])
         e = np.mean(w - y)
-        self.integrated_error = self.integrated_error + e * (1 / self.sim.model_steps_per_controller_update)
-        self.integrated_error = np.clip(self.integrated_error, -0.3, 0.3)
 
         # calculate action change
         action_change = self.last_system_inputs[-(self.sim.sensor_steps_per_controller_update + 1)] \
@@ -315,10 +368,9 @@ class DirectControllerPT2(gym.Env):
             done = False
 
         # create obs and reward
-        obs = self._create_obs_with_vel(first=False)
+        obs = self.observation_function(first=False)
         reward = self.reward_function()
-
-        return np.array(obs), reward, done, {}
+        return obs, reward, done, {}
 
     def render(self, mode="human"):
         """
@@ -398,10 +450,8 @@ class DirectControllerPT2(gym.Env):
         :param model: Model to be used for action prediction.
         :param folder_name: Folder to save evaluation in.
         """
-        # steps = range(-10, 11)
-        # slopes = np.linspace(0, 0.5, 3)
-        steps = [0]
-        slopes = [0, 0.1]
+        steps = range(-10, 11)
+        slopes = np.linspace(0, 0.5, 3)
         i = 1
         pathlib.Path(f"eval\\{folder_name}").mkdir(exist_ok=True)
         rewards = []
