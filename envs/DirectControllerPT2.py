@@ -153,7 +153,7 @@ class DirectControllerPT2(gym.Env):
         :return:
         """
         if step_start is None:
-            step_start = np.random.uniform(-0.1, -0.1)
+            step_start = np.random.uniform(-1, 1)
         if step_end is None:
             step_end = np.random.uniform(-1, 1)
         if step_slope is None:
