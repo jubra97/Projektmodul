@@ -9,7 +9,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.ddpg.policies import MlpPolicy
 
 from CustomEvalCallback import CustomEvalCallback
-from envs.DirectControllerv2 import DirectControllerPT2
+from envs.DirectControllerPT2 import DirectControllerPT2
 
 actor_net = [20, 20]
 critic_net = [200, 200]
