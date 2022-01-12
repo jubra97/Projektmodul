@@ -13,6 +13,7 @@ sine = np.sin(2 * np.pi * 4 * t + np.pi/2)
 
 obs = env.reset(custom_w=sine)
 done = False
+env.sim.last_state = [[0, sine[0] * 1000]]
 while not done:
     action, _states = model.predict(obs)
     obs, rew, done, _ = env.step(action)

@@ -15,7 +15,6 @@ actor_net = [20, 20]
 critic_net = [200, 200]
 af = th.nn.Tanh
 
-# TODO: Which observation should be used?
 
 if __name__ == "__main__":
 

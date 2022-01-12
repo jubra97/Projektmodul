@@ -14,7 +14,7 @@ from envs.TfSim import TfSim
 class DirectControllerPT2(gym.Env):
 
     def __init__(self, oscillating=True, log=False, reward_function="discrete", observation_function="obs_with_vel",
-                 oscillation_pen_gain=1,
+                 oscillation_pen_gain=3,
                  oscillation_pen_fun=np.sqrt, error_pen_fun=None):
         """
         Create a gym environment to directly control the actuating value (u) of a system.
@@ -23,16 +23,12 @@ class DirectControllerPT2(gym.Env):
         """
         super(DirectControllerPT2, self).__init__()
         if oscillating:
-            sys = control.tf([1], [0.001, 0.005, 1])
+            sys = control.tf([2], [0.001, 0.005, 1])
         else:
-            sys = control.tf([1], [0.001, 0.05, 1])
+            sys = control.tf([2], [0.001, 0.05, 1])
 
-        # sys = control.tf([3.55e3], [0.00003, 0.0014, 1])
-
-        # input_lag = control.tf([1], [0.0001, 0.01, 1])
-        # sys = control.series(input_lag, sys)
-
-        self.sim = TfSim(sys, 10_000, 200, 100, 1.5)  # create simulation object with an arbitrary tf.
+        # create simulation object with an arbitrary tf.
+        self.sim = TfSim(sys, 10_000, 200, 100, action_scale=20, obs_scale=10, simulation_time=1.5)
 
         if reward_function == "discrete":
             self.reward_function = self._create_reward_discrete
@@ -85,7 +81,7 @@ class DirectControllerPT2(gym.Env):
                                            shape=(1,),
                                            dtype=np.float32)
 
-    def reset(self, step_height=None, step_slope=None, custom_w=None):
+    def reset(self, step_start=None, step_end=None, step_slope=None, custom_w=None):
         """
         Reset the environment. Called before every start of a new episode. If no custom reference value (custom_w) is
         given a ramp (or step) is used.
@@ -108,12 +104,21 @@ class DirectControllerPT2(gym.Env):
             assert self.sim.n_sample_points == len(custom_w), "Simulation and input length must not differ"
             self.w = custom_w
         else:
-            self.w = self.set_w(step_height, step_slope)
+            self.w = self.set_w(step_start, step_end, step_slope)
 
         # reset stuff that is only valid in the same episode
         self.last_system_inputs = deque([0] * 3, maxlen=3)
         self.last_system_outputs = deque([0] * 3, maxlen=3)
         self.last_set_points = deque([0] * 3, maxlen=3)
+
+        # set x0 in state space, to do so compute step response to given w[0]
+        T = control.timeresp._default_time_vector(self.sim.sys)
+        # compute system gain
+        # https://math.stackexchange.com/questions/2424383/how-should-i-interpret-the-static-gain-from-matlabs-command-zpkdata
+        gain = (self.sim.sys.C @ np.linalg.inv(-self.sim.sys.A) @ self.sim.sys.B + self.sim.sys.D)[0][0]
+        U = np.ones_like(T) * self.w[0] * (self.sim.obs_scale/gain)
+        _, step_response, states = control.forced_response(self.sim.sys, T, U, return_x=True)
+        self.sim.last_state = np.array([states[:, -1]]).T
 
         if self.log:
             self.episode_log["obs"]["last_set_points"] = []
@@ -140,20 +145,22 @@ class DirectControllerPT2(gym.Env):
         obs = self.observation_function(first=True)
         return obs
 
-    def set_w(self, step_height=None, step_slope=None):
+    def set_w(self, step_start=None, step_end=None, step_slope=None):
         """
         Create reference value (w) as ramp or step
         :param step_height: Height of ramp/ step
         :param step_slope: Slope of ramp; if 0 a step is generated
         :return:
         """
-        if step_height is None:
-            step_height = np.random.uniform(-10, 10)
+        if step_start is None:
+            step_start = np.random.uniform(-0.1, -0.1)
+        if step_end is None:
+            step_end = np.random.uniform(-1, 1)
         if step_slope is None:
             step_slope = np.random.uniform(0, 0.5)
-        w_before_step = [0] * int(0.5 * self.sim.model_freq)
-        w_step = np.linspace(0, step_height, int(step_slope * self.sim.model_freq)).tolist()
-        w_after_step = [step_height] * int(self.sim.n_sample_points - len(w_before_step) - len(w_step))
+        w_before_step = [step_start] * int(0.5 * self.sim.model_freq)
+        w_step = np.linspace(w_before_step[0], step_end, int(step_slope * self.sim.model_freq)).tolist()
+        w_after_step = [step_end] * int(self.sim.n_sample_points - len(w_before_step) - len(w_step))
         w = w_before_step + w_step + w_after_step
         return w
 
@@ -172,7 +179,9 @@ class DirectControllerPT2(gym.Env):
         set_point_vel = (set_points[-2] - set_points[-1]) * 1 / self.sim.sensor_steps_per_controller_update
 
         if first:
-            obs = [self.w[0], system_inputs[-1], system_outputs[-1], set_point_vel, input_vel, outputs_vel]
+            #  @ is matrix/vector multiply
+            obs = [self.w[0], system_inputs[-1], (self.sim.last_state[:, -1] @ self.sim.sys.C.T)[0] / self.sim.obs_scale,
+                   set_point_vel, input_vel, outputs_vel]
         else:
             obs = [set_points[-1], system_inputs[-1], system_outputs[-1], set_point_vel, input_vel, outputs_vel]
 
@@ -192,8 +201,9 @@ class DirectControllerPT2(gym.Env):
         :return:
         """
         if first:
-            obs = [self.w[0]] * len(list(self.last_set_points)) + list(self.last_system_inputs) + list(
-                self.last_system_outputs)
+            #  @ is matrix/vector multiply
+            obs = [0, 0, self.w[0]] + list(self.last_system_inputs) +\
+                  [0, 0, (self.sim.last_state[:, -1] @ self.sim.sys.C.T)[0] / self.sim.obs_scale]
         else:
             obs = list(self.last_set_points) + list(self.last_system_inputs) + list(self.last_system_outputs)
 
@@ -291,9 +301,6 @@ class DirectControllerPT2(gym.Env):
                         - self.last_system_inputs[-self.sim.sensor_steps_per_controller_update]
 
         abs_error = abs(e)
-        # pen_error = np.sqrt(abs(e))
-        # pen_action = np.sqrt(abs(action_change)) * 0.1
-        # pen_action = np.clip(pen_action, 0, 10)
 
         if self.error_pen_fun:
             pen_error = self.error_pen_fun(abs(e))
@@ -306,9 +313,7 @@ class DirectControllerPT2(gym.Env):
             pen_action = abs(action_change) * self.oscillation_pen_gain
 
         reward = 0
-        if abs_error < 5:
-            reward += 0.5
-        if abs_error < 1:
+        if abs_error < 0.5:
             reward += 1
         if abs_error < 0.1:
             reward += 2
@@ -335,15 +340,13 @@ class DirectControllerPT2(gym.Env):
         :param action: Next u for simulation.
         :return:
         """
-        # scale normalized action to fit to system values.
-        system_input = np.clip(action[0] * 20, -20, 20)  # u
 
         # create static input for every simulation step until next update of u.
-        system_input_trajectory = [system_input] * (self.sim.model_steps_per_controller_update + 1)
+        system_input_trajectory = [action[0]] * (self.sim.model_steps_per_controller_update + 1)
 
         if self.log:
-            self.episode_log["action"]["value"].append(system_input)
-            self.episode_log["action"]["change"].append(system_input - self.last_system_inputs[-1])
+            self.episode_log["action"]["value"].append(action[0] * self.sim.action_scale)
+            self.episode_log["action"]["change"].append((action[0] - self.last_system_inputs[-1]) * self.sim.action_scale)
 
         # simulate system until next update of u.
         self.sim.sim_one_step(u=system_input_trajectory, add_noise=True)
@@ -362,8 +365,8 @@ class DirectControllerPT2(gym.Env):
         if self.sim.done:
             done = True
             if self.log:
-                self.episode_log["function"]["w"] = self.w
-                self.episode_log["function"]["y"] = self.sim._sim_out
+                self.episode_log["function"]["w"] = np.array(self.w) * self.sim.obs_scale
+                self.episode_log["function"]["y"] = np.array(self.sim._sim_out) * self.sim.obs_scale
         else:
             done = False
 
@@ -450,7 +453,7 @@ class DirectControllerPT2(gym.Env):
         :param model: Model to be used for action prediction.
         :param folder_name: Folder to save evaluation in.
         """
-        steps = range(-10, 11)
+        steps = np.linspace(-1, 1, 20)
         slopes = np.linspace(0, 0.5, 3)
         i = 1
         pathlib.Path(f"eval\\{folder_name}").mkdir(exist_ok=True)
@@ -464,7 +467,7 @@ class DirectControllerPT2(gym.Env):
                 actions = []
                 # create env
                 done = False
-                obs = self.reset(step, slope)
+                obs = self.reset(0, step, slope)
                 while not done:
                     action, _ = model.predict(obs)
                     obs, reward, done, info = self.step(action)
