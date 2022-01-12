@@ -27,6 +27,8 @@ class DirectControllerPT2(gym.Env):
         else:
             sys = control.tf([2], [0.001, 0.05, 1])
 
+        # sys = control.tf([3.55e3], [0.00003, 0.0014, 1])  #  pt2 of dms
+
         # create simulation object with an arbitrary tf.
         self.sim = TfSim(sys, 10_000, 200, 100, action_scale=20, obs_scale=10, simulation_time=1.5)
 
