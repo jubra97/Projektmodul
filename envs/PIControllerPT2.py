@@ -8,29 +8,30 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.fft import fft, fftfreq
 
-from envs.TfSim import TfSim
+from envs.IOSim import IOSim
 
 
-class DirectControllerPT2(gym.Env):
+class PIControllerPT2(gym.Env):
 
     def __init__(self, oscillating=True, log=False, reward_function="discrete", observation_function="obs_with_vel",
-                 oscillation_pen_gain=3,
-                 oscillation_pen_fun=np.sqrt, error_pen_fun=None):
+                 oscillation_pen_gain=3, oscillation_pen_fun=np.sqrt, error_pen_fun=None):
         """
         Create a gym environment to directly control the actuating value (u) of a system.
         :param oscillating: If True a
         :param log: Log the simulation outcomes.
         """
-        super(DirectControllerPT2, self).__init__()
+        super(PIControllerPT2, self).__init__()
         if oscillating:
-            sys = control.tf([2], [0.001, 0.005, 1])
+            self.open_loop_sys = control.tf([2], [0.001, 0.005, 1])
         else:
-            sys = control.tf([2], [0.001, 0.05, 1])
+            self.open_loop_sys = control.tf([2], [0.001, 0.05, 1])
 
         # sys = control.tf([3.55e3], [0.00003, 0.0014, 1])  #  pt2 of dms
+        self.open_loop_sys = control.tf2ss(self.open_loop_sys)
+
 
         # create simulation object with an arbitrary tf.
-        self.sim = TfSim(sys, 10_000, 200, 100, action_scale=20, obs_scale=10, simulation_time=1.5)
+        self.sim = IOSim(None, 10_000, 200, 100, action_scale=20, obs_scale=10, simulation_time=1.5)
 
         if reward_function == "discrete":
             self.reward_function = self._create_reward_discrete
@@ -61,6 +62,8 @@ class DirectControllerPT2(gym.Env):
         self.last_system_inputs = deque([0] * 3, maxlen=3)
         self.last_system_outputs = deque([0] * 3, maxlen=3)
         self.last_set_points = deque([0] * 3, maxlen=3)
+        self.last_ps = deque([0] * 3, maxlen=3)
+        self.last_is = deque([0] * 3, maxlen=3)
 
         self.w = []
 
@@ -112,9 +115,11 @@ class DirectControllerPT2(gym.Env):
         self.last_system_inputs = deque([0] * 3, maxlen=3)
         self.last_system_outputs = deque([0] * 3, maxlen=3)
         self.last_set_points = deque([0] * 3, maxlen=3)
+        self.last_ps = deque([0] * 3, maxlen=3)
+        self.last_is = deque([0] * 3, maxlen=3)
 
         # set x0 in state space, to do so compute step response to given w[0]
-        T = control.timeresp._default_time_vector(self.sim.sys)
+        # T = control.timeresp._default_time_vector(self.sim.sys)
         # compute system gain
         # https://math.stackexchange.com/questions/2424383/how-should-i-interpret-the-static-gain-from-matlabs-command-zpkdata
         # gain = (self.sim.sys.C @ np.linalg.inv(-self.sim.sys.A) @ self.sim.sys.B + self.sim.sys.D)[0][0]
@@ -343,15 +348,22 @@ class DirectControllerPT2(gym.Env):
         :return:
         """
 
+        controller_p = np.clip(action[0] + 1, 0, 2)
+        controller_i = np.clip(action[1] + 1, 0, 2)
+
         # create static input for every simulation step until next update of u.
         system_input_trajectory = [action[0]] * (self.sim.model_steps_per_controller_update + 1)
 
         if self.log:
-            self.episode_log["action"]["value"].append(action[0] * self.sim.action_scale)
-            self.episode_log["action"]["change"].append((action[0] - self.last_system_inputs[-1]) * self.sim.action_scale)
+            self.episode_log["action"]["p_value"].append(controller_p)
+            self.episode_log["action"]["p_change"].append(controller_p - self.last_ps[-1])
+            self.episode_log["action"]["i_value"].append(controller_i)
+            self.episode_log["action"]["i_change"].append(controller_i - self.last_is[-1])
 
-        # simulate system until next update of u.
-        self.sim.sim_one_step(u=system_input_trajectory, add_noise=True)
+        # update system with new p and i; simulate next time step
+        self.sim.sys = self.create_io_sys(controller_p, controller_i)
+        self.sim.sim_one_step(w=self.w[:,
+                                self.sim.current_simulation_step:self.sim.current_simulation_step + self.sim.model_steps_per_controller_update + 1])
 
         # update fifo lists with newest values. In simulation a simulation sample time, a sensor sample time, and a u
         # update sample time is used. A smaller simulation sample time used for more precise simulation results.
@@ -359,16 +371,19 @@ class DirectControllerPT2(gym.Env):
         # The u update sample time is used that a potential actor / calculation of u is even slower than the sensor.
         # For the fifo lists the newest sensor values are used.
         for step in range(self.sim.sensor_steps_per_controller_update, 0, -1):
-            self.last_system_inputs.append(self.sim.u_sensor[self.sim.current_sensor_step - step])
-            self.last_system_outputs.append(self.sim.sensor_out[self.sim.current_sensor_step - step])
-            self.last_set_points.append(
-                self.w[self.sim.current_simulation_step - (step - 1) * self.sim.model_steps_per_senor_update - 1])
+            self.last_ps.append(controller_p)
+            self.last_is.append(controller_i)
+            self.last_system_inputs.append(self.sim.sensor_out[2, self.sim.current_sensor_step - step])  # u
+            self.last_system_outputs.append(self.sim.sensor_out[1, self.sim.current_sensor_step - step])  # y
+            self.last_set_points.append(self.w[0, self.sim.current_simulation_step - (step - 1) * self.sim.model_steps_per_senor_update - 1])  # w
 
         if self.sim.done:
             done = True
             if self.log:
-                self.episode_log["function"]["w"] = np.array(self.w) * self.sim.obs_scale
-                self.episode_log["function"]["y"] = np.array(self.sim._sim_out) * self.sim.obs_scale
+                self.episode_log["function"]["w"] = self.w[0, :]
+                self.episode_log["function"]["y"] = self.sim._sim_out[1, :]
+                self.episode_log["function"]["u"] = self.sim._sim_out[2, :]
+                self.episode_log["function"]["e"] = self.sim._sim_out[3, :]
         else:
             done = False
 
@@ -376,6 +391,19 @@ class DirectControllerPT2(gym.Env):
         obs = self.observation_function(first=False)
         reward = self.reward_function()
         return obs, reward, done, {}
+
+    def create_io_sys(self, p, i):
+        pi_controller = control.tf2ss(control.tf([p, i], [1, 0]))
+
+        io_open_loop = control.LinearIOSystem(self.open_loop_sys, inputs="u", outputs="y", name="open_loop")
+        io_pi = control.LinearIOSystem(pi_controller, inputs="e", outputs="u", name="controller")
+        w_y_comp = control.summing_junction(inputs=["w", "-y_noisy"], output="e")
+        y_noise = control.summing_junction(inputs=["y", "noise"], outputs="y_noisy")
+
+        closed_loop = control.interconnect([w_y_comp, io_pi, io_open_loop, y_noise], name="closed_loop",
+                                           inplist=["w", "noise"],
+                                           outlist=["y", "y_noisy", "u", "e"])
+        return closed_loop
 
     def render(self, mode="human"):
         """
