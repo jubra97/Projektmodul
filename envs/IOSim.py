@@ -24,6 +24,8 @@ class IOSim:
         self.simulation_time = simulation_time
         self.n_sample_points = int(model_freq * simulation_time)
         self.t = np.linspace(0, simulation_time, self.n_sample_points)
+        self.obs_scale = obs_scale
+        self.action_scale = action_scale
 
         self.current_simulation_time = 0
         self.current_simulation_step = 0

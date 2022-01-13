@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     RUN_NAME = f"RUN"
 
-    env = make_vec_env(PIControllerPT2, 3, vec_env_cls=SubprocVecEnv)  # create learning env
+    env = make_vec_env(PIControllerPT2, 1)#, vec_env_cls=SubprocVecEnv)  # create learning env
 
     # create action noise
     n_actions = env.action_space.shape[-1]

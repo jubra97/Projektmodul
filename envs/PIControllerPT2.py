@@ -28,7 +28,7 @@ class PIControllerPT2(gym.Env):
 
         # sys = control.tf([3.55e3], [0.00003, 0.0014, 1])  #  pt2 of dms
         self.open_loop_sys = control.tf2ss(self.open_loop_sys)
-
+        self.open_loop_sys_gain = (self.open_loop_sys.C @ np.linalg.inv(-self.open_loop_sys.A) @ self.open_loop_sys.B + self.open_loop_sys.D)[0][0]
 
         # create simulation object with an arbitrary tf.
         self.sim = IOSim(None, 10_000, 200, 100, action_scale=20, obs_scale=10, simulation_time=1.5)
@@ -81,9 +81,9 @@ class PIControllerPT2(gym.Env):
                                                 high=np.array([100] * obs_size, dtype=np.float32),
                                                 shape=(obs_size,),
                                                 dtype=np.float32)
-        self.action_space = gym.spaces.Box(low=np.array([-1], dtype=np.float32),
-                                           high=np.array([1], dtype=np.float32),
-                                           shape=(1,),
+        self.action_space = gym.spaces.Box(low=np.array([-1]*2, dtype=np.float32),
+                                           high=np.array([1]*2, dtype=np.float32),
+                                           shape=(2,),
                                            dtype=np.float32)
 
     def reset(self, step_start=None, step_end=None, step_slope=None, custom_w=None):
@@ -119,13 +119,15 @@ class PIControllerPT2(gym.Env):
         self.last_is = deque([0] * 3, maxlen=3)
 
         # set x0 in state space, to do so compute step response to given w[0]
-        # T = control.timeresp._default_time_vector(self.sim.sys)
+        T = control.timeresp._default_time_vector(self.open_loop_sys)
         # compute system gain
         # https://math.stackexchange.com/questions/2424383/how-should-i-interpret-the-static-gain-from-matlabs-command-zpkdata
-        # gain = (self.sim.sys.C @ np.linalg.inv(-self.sim.sys.A) @ self.sim.sys.B + self.sim.sys.D)[0][0]
+
         # U = np.ones_like(T) * self.w[0] * (self.sim.obs_scale/gain)
-        # _, step_response, states = control.forced_response(self.sim.sys, T, U, return_x=True)
-        # self.sim.last_state = np.array([states[:, -1]]).T
+        U = np.ones_like(T) * self.w[0, 0] * (1 / self.open_loop_sys_gain)
+        _, step_response, states = control.forced_response(self.open_loop_sys, T, U, return_x=True)
+        self.sim.last_state = np.concatenate((np.array([[0]]), states[:, -1:]))
+        print(self.sim.last_state)
 
         if self.log:
             self.episode_log["obs"]["last_set_points"] = []
@@ -152,7 +154,7 @@ class PIControllerPT2(gym.Env):
         obs = self.observation_function(first=True)
         return obs
 
-    def set_w(self, step_start=None, step_end=None, step_slope=None):
+    def set_w(self, step_start=None, step_end=None, step_slope=None, add_noise=True):
         """
         Create reference value (w) as ramp or step
         :param step_height: Height of ramp/ step
@@ -169,7 +171,14 @@ class PIControllerPT2(gym.Env):
         w_step = np.linspace(w_before_step[0], step_end, int(step_slope * self.sim.model_freq)).tolist()
         w_after_step = [step_end] * int(self.sim.n_sample_points - len(w_before_step) - len(w_step))
         w = w_before_step + w_step + w_after_step
-        return w
+
+        if add_noise:
+            noise = np.random.normal(0, 0.001, self.sim.n_sample_points)
+        else:
+            noise = [0] * self.sim.n_sample_points
+
+        sys_input = np.array([w, noise])
+        return sys_input
 
     def _create_obs_with_vel(self, first=False):
         """
@@ -187,7 +196,7 @@ class PIControllerPT2(gym.Env):
 
         if first:
             #  @ is matrix/vector multiply
-            obs = [self.w[0], system_inputs[-1], (self.sim.last_state[:, -1] @ self.sim.sys.C.T)[0] / self.sim.obs_scale,
+            obs = [self.w[0, 0], system_inputs[-1], (self.sim.last_state[1:, -1] @ self.open_loop_sys.C.T)[0] / self.sim.obs_scale,
                    set_point_vel, input_vel, outputs_vel]
         else:
             obs = [set_points[-1], system_inputs[-1], system_outputs[-1], set_point_vel, input_vel, outputs_vel]
