@@ -18,7 +18,7 @@ af = th.nn.Tanh
 
 if __name__ == "__main__":
 
-    RUN_NAME = f"RUN"
+    RUN_NAME = f"RUN_A"
 
     env = make_vec_env(DirectControllerPT2, 3, vec_env_cls=SubprocVecEnv)  # create learning env
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
                  train_freq=1,
                  gradient_steps=1
                  )
-    model.learn(total_timesteps=75_000, tb_log_name=f"{RUN_NAME}", callback=callbacks)
+    model.learn(total_timesteps=20_000, tb_log_name=f"{RUN_NAME}", callback=callbacks)
     DirectControllerPT2(log=True).eval(model, folder_name=RUN_NAME)
     # #
     # # # save model if you want to

@@ -14,7 +14,7 @@ from envs.TfSim import TfSim
 class DirectControllerPT2(gym.Env):
 
     def __init__(self, oscillating=True, log=False, reward_function="discrete", observation_function="obs_with_vel",
-                 oscillation_pen_gain=3,
+                 oscillation_pen_gain=2,
                  oscillation_pen_fun=np.sqrt, error_pen_fun=None):
         """
         Create a gym environment to directly control the actuating value (u) of a system.
@@ -27,10 +27,10 @@ class DirectControllerPT2(gym.Env):
         else:
             sys = control.tf([2], [0.001, 0.05, 1])
 
-        # sys = control.tf([3.55e3], [0.00003, 0.0014, 1])  #  pt2 of dms
+        sys = control.tf([3.55e3], [0.00003, 0.0014, 1])  #  pt2 of dms
 
         # create simulation object with an arbitrary tf.
-        self.sim = TfSim(sys, 10_000, 200, 100, action_scale=20, obs_scale=10, simulation_time=1.5)
+        self.sim = TfSim(sys, 10_000, 200, 100, action_scale=500, obs_scale=3_000_000, simulation_time=1.5)
 
         if reward_function == "discrete":
             self.reward_function = self._create_reward_discrete
@@ -155,9 +155,9 @@ class DirectControllerPT2(gym.Env):
         :return:
         """
         if step_start is None:
-            step_start = np.random.uniform(-1, 1)
+            step_start = np.random.uniform(0, 0.5)
         if step_end is None:
-            step_end = np.random.uniform(-1, 1)
+            step_end = np.random.uniform(0, 0.5)
         if step_slope is None:
             step_slope = np.random.uniform(0, 0.5)
         w_before_step = [step_start] * int(0.5 * self.sim.model_freq)
@@ -322,6 +322,8 @@ class DirectControllerPT2(gym.Env):
         if abs_error < 0.05:
             reward += 3
         if abs_error < 0.02:
+            reward += 4
+        if abs_error < 0.01:
             reward += 5
         if abs_error < 0.005:
             reward += 10
@@ -455,7 +457,7 @@ class DirectControllerPT2(gym.Env):
         :param model: Model to be used for action prediction.
         :param folder_name: Folder to save evaluation in.
         """
-        steps = np.linspace(-1, 1, 20)
+        steps = np.linspace(0, 0.5, 20)
         slopes = np.linspace(0, 0.5, 3)
         i = 1
         pathlib.Path(f"eval\\{folder_name}").mkdir(exist_ok=True)
