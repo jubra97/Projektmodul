@@ -18,13 +18,13 @@ af = th.nn.Tanh
 
 if __name__ == "__main__":
 
-    RUN_NAME = f"RUN_A"
+    RUN_NAME = f"RUN_C"
 
     env = make_vec_env(DirectControllerPT2, 3, vec_env_cls=SubprocVecEnv)  # create learning env
 
     # create action noise
     n_actions = env.action_space.shape[-1]
-    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.1) * np.ones(n_actions))
+    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.05) * np.ones(n_actions))
 
     # create eval callback
     online_eval_env = DirectControllerPT2(log=True)  # create eval env
@@ -48,7 +48,7 @@ if __name__ == "__main__":
                  train_freq=1,
                  gradient_steps=1
                  )
-    model.learn(total_timesteps=20_000, tb_log_name=f"{RUN_NAME}", callback=callbacks)
+    model.learn(total_timesteps=100_000, tb_log_name=f"{RUN_NAME}", callback=callbacks)
     DirectControllerPT2(log=True).eval(model, folder_name=RUN_NAME)
     # #
     # # # save model if you want to
