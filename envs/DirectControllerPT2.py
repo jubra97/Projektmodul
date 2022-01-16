@@ -14,7 +14,7 @@ from envs.TfSim import TfSim
 class DirectControllerPT2(gym.Env):
 
     def __init__(self, oscillating=True, log=False, reward_function="discrete", observation_function="obs_with_vel",
-                 oscillation_pen_gain=3,
+                 oscillation_pen_gain=0.1,
                  oscillation_pen_fun=np.sqrt, error_pen_fun=None):
         """
         Create a gym environment to directly control the actuating value (u) of a system.
@@ -27,10 +27,11 @@ class DirectControllerPT2(gym.Env):
         else:
             sys = control.tf([2], [0.001, 0.05, 1])
 
-        # sys = control.tf([3.55e3], [0.00003, 0.0014, 1])  #  pt2 of dms
+        sys = control.tf([3.55e3], [0.00003, 0.0014, 1])  #  pt2 of dms
 
         # create simulation object with an arbitrary tf.
-        self.sim = TfSim(sys, 10_000, 200, 100, action_scale=20, obs_scale=10, simulation_time=1.5)
+        self.sim = TfSim(sys, 10_000, 200, 100, action_scale=500, obs_scale=3_000_000, simulation_time=1.5)
+        self.sys_gain = (self.sim.sys.C @ np.linalg.inv(-self.sim.sys.A) @ self.sim.sys.B + self.sim.sys.D)[0][0]
 
         if reward_function == "discrete":
             self.reward_function = self._create_reward_discrete
@@ -54,6 +55,7 @@ class DirectControllerPT2(gym.Env):
                 "No corresponding observation function could be found. If you want to add your own observation"
                 "function add the function to this if else block.")
 
+        self.oscillation_pen_gain_raising = np.linspace(0, 20, 670)
         self.oscillation_pen_gain = oscillation_pen_gain
         self.oscillation_pen_fun = oscillation_pen_fun
         self.error_pen_fun = error_pen_fun
@@ -101,6 +103,10 @@ class DirectControllerPT2(gym.Env):
         # reset simulation
         self.sim.reset()
 
+        # self.oscillation_pen_gain = self.oscillation_pen_gain_raising[self.n_episodes]
+        print(self.oscillation_pen_gain)
+        print(self.n_episodes)
+
         # create reference value (w)
         if custom_w is not None:
             assert self.sim.n_sample_points == len(custom_w), "Simulation and input length must not differ"
@@ -108,17 +114,11 @@ class DirectControllerPT2(gym.Env):
         else:
             self.w = self.set_w(step_start, step_end, step_slope)
 
-        # reset stuff that is only valid in the same episode
-        self.last_system_inputs = deque([0] * 3, maxlen=3)
-        self.last_system_outputs = deque([0] * 3, maxlen=3)
-        self.last_set_points = deque([0] * 3, maxlen=3)
-
         # set x0 in state space, to do so compute step response to given w[0]
         T = control.timeresp._default_time_vector(self.sim.sys)
         # compute system gain
         # https://math.stackexchange.com/questions/2424383/how-should-i-interpret-the-static-gain-from-matlabs-command-zpkdata
-        gain = (self.sim.sys.C @ np.linalg.inv(-self.sim.sys.A) @ self.sim.sys.B + self.sim.sys.D)[0][0]
-        U = np.ones_like(T) * self.w[0] * (self.sim.obs_scale/gain)
+        U = np.ones_like(T) * self.w[0] * (self.sim.obs_scale/self.sys_gain)
         _, step_response, states = control.forced_response(self.sim.sys, T, U, return_x=True)
         self.sim.last_state = np.array([states[:, -1]]).T
 
@@ -144,7 +144,10 @@ class DirectControllerPT2(gym.Env):
             self.episode_log["function"]["y"] = None
 
         # create start observation of new episode
-        obs = self.observation_function(first=True)
+        self.last_system_inputs = deque([(self.w[0] * self.sim.obs_scale)/(self.sys_gain * self.sim.action_scale)] * 3, maxlen=3)
+        self.last_system_outputs = deque([(self.sim.last_state[:, -1] @ self.sim.sys.C.T)[0] / self.sim.obs_scale] * 3, maxlen=3)
+        self.last_set_points = deque([self.w[0]] * 3, maxlen=3)
+        obs = self.observation_function(first=False)
         return obs
 
     def set_w(self, step_start=None, step_end=None, step_slope=None):
@@ -155,9 +158,9 @@ class DirectControllerPT2(gym.Env):
         :return:
         """
         if step_start is None:
-            step_start = np.random.uniform(-1, 1)
+            step_start = np.random.uniform(0, 0.5)
         if step_end is None:
-            step_end = np.random.uniform(-1, 1)
+            step_end = np.random.uniform(0, 0.5)
         if step_slope is None:
             step_slope = np.random.uniform(0, 0.5)
         w_before_step = [step_start] * int(0.5 * self.sim.model_freq)
@@ -166,7 +169,7 @@ class DirectControllerPT2(gym.Env):
         w = w_before_step + w_step + w_after_step
         return w
 
-    def _create_obs_with_vel(self, first=False):
+    def _create_obs_with_vel(self):
         """
         Create observation consisting of: set point (w), system output (y), system input (u) and their derivations.
         :param first: True if first call in an episode (normally in reset()).
@@ -180,12 +183,7 @@ class DirectControllerPT2(gym.Env):
         input_vel = (system_inputs[-3] - system_inputs[-1]) * 1 / self.sim.model_steps_per_controller_update
         set_point_vel = (set_points[-2] - set_points[-1]) * 1 / self.sim.sensor_steps_per_controller_update
 
-        if first:
-            #  @ is matrix/vector multiply
-            obs = [self.w[0], system_inputs[-1], (self.sim.last_state[:, -1] @ self.sim.sys.C.T)[0] / self.sim.obs_scale,
-                   set_point_vel, input_vel, outputs_vel]
-        else:
-            obs = [set_points[-1], system_inputs[-1], system_outputs[-1], set_point_vel, input_vel, outputs_vel]
+        obs = [set_points[-1], system_inputs[-1], system_outputs[-1], set_point_vel, input_vel, outputs_vel]
 
         if self.log:
             self.episode_log["obs"]["set_point"].append(obs[0])
@@ -194,28 +192,26 @@ class DirectControllerPT2(gym.Env):
             self.episode_log["obs"]["set_point_vel"].append(obs[3])
             self.episode_log["obs"]["input_vel"].append(obs[4])
             self.episode_log["obs"]["outputs_vel"].append(obs[5])
+
         return np.array(obs)
 
-    def _create_obs_last_states(self, first=False):
+    def _create_obs_last_states(self):
         """
         Create observation consisting of: last 3 set points (w), last 3 system outputs (y), last 3 system inputs (u).
         :param first: True if first call in an episode (normally in reset()).
         :return:
         """
-        if first:
-            #  @ is matrix/vector multiply
-            obs = [0, 0, self.w[0]] + list(self.last_system_inputs) +\
-                  [0, 0, (self.sim.last_state[:, -1] @ self.sim.sys.C.T)[0] / self.sim.obs_scale]
-        else:
-            obs = list(self.last_set_points) + list(self.last_system_inputs) + list(self.last_system_outputs)
+
+        obs = list(self.last_set_points) + list(self.last_system_inputs) + list(self.last_system_outputs)
 
         if self.log:
             self.episode_log["obs"]["last_set_points"].append(list(obs[0:3]))
             self.episode_log["obs"]["last_system_inputs"].append(list(obs[3:6]))
             self.episode_log["obs"]["last_system_outputs"].append(list(obs[6:9]))
+
         return np.array(obs)
 
-    def _create_obs_errors_with_vel(self, first=False):
+    def _create_obs_errors_with_vel(self):
         """
         Create observation consisting of: system error (e), system input (u) and their derivations.
         :param first: True if first call in an episode (normally in reset()).
@@ -229,20 +225,17 @@ class DirectControllerPT2(gym.Env):
         error_vel = (errors[-2] - errors[-1]) * 1 / self.sim.sensor_steps_per_controller_update
         input_vel = (system_inputs[-3] - system_inputs[-1]) * 1 / self.sim.model_steps_per_controller_update
 
-        if first:
-            error = self.w[0] - system_outputs[-1]
-            obs = [error, system_inputs[-1], error_vel, input_vel]
-        else:
-            obs = [errors[0], system_inputs[-1], error_vel, input_vel]
+        obs = [errors[0], system_inputs[-1], error_vel, input_vel]
 
         if self.log:
             self.episode_log["obs"]["error"].append(obs[0])
             self.episode_log["obs"]["system_input"].append(obs[1])
             self.episode_log["obs"]["error_vel"].append(obs[2])
             self.episode_log["obs"]["input_vel"].append(obs[3])
+
         return np.array(obs)
 
-    def _create_obs_last_errors(self, first=False):
+    def _create_obs_last_errors(self):
         """
         Create observation consisting of: last 3 system errors (e), last 3 system inputs (u).
         :param first: True if first call in an episode (normally in reset()).
@@ -252,14 +245,12 @@ class DirectControllerPT2(gym.Env):
         system_outputs = np.array(list(self.last_system_outputs))
         errors = (set_points - system_outputs).tolist()
 
-        if first:
-            obs = errors + list(self.last_system_inputs)
-        else:
-            obs = errors + list(self.last_system_inputs)
+        obs = errors + list(self.last_system_inputs)
 
         if self.log:
             self.episode_log["obs"]["errors"].append(obs[0:3])
             self.episode_log["obs"]["last_system_inputs"].append(obs[3:6])
+
         return np.array(obs)
 
     def _create_reward(self):
@@ -322,6 +313,8 @@ class DirectControllerPT2(gym.Env):
         if abs_error < 0.05:
             reward += 3
         if abs_error < 0.02:
+            reward += 4
+        if abs_error < 0.01:
             reward += 5
         if abs_error < 0.005:
             reward += 10
@@ -455,7 +448,7 @@ class DirectControllerPT2(gym.Env):
         :param model: Model to be used for action prediction.
         :param folder_name: Folder to save evaluation in.
         """
-        steps = np.linspace(-1, 1, 20)
+        steps = np.linspace(0, 0.5, 20)
         slopes = np.linspace(0, 0.5, 3)
         i = 1
         pathlib.Path(f"eval\\{folder_name}").mkdir(exist_ok=True)
