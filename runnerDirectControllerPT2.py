@@ -9,7 +9,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.ddpg.policies import MlpPolicy
 
 from CustomEvalCallback import CustomEvalCallback
-from envs.PIControllerPT2 import PIControllerPT2
+from envs.DirectControllerPT2 import DirectControllerPT2
 
 actor_net = [20, 20]
 critic_net = [200, 200]
@@ -20,14 +20,14 @@ if __name__ == "__main__":
 
     RUN_NAME = f"RUN"
 
-    env = make_vec_env(PIControllerPT2, 3, vec_env_cls=SubprocVecEnv)  # create learning env
+    env = make_vec_env(DirectControllerPT2, 3, vec_env_cls=SubprocVecEnv)  # create learning env
 
     # create action noise
     n_actions = env.action_space.shape[-1]
-    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.1) * np.ones(n_actions))
+    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.05) * np.ones(n_actions))
 
     # create eval callback
-    online_eval_env = PIControllerPT2(log=True)  # create eval env
+    online_eval_env = DirectControllerPT2(log=True)  # create eval env
     online_eval_env = Monitor(online_eval_env)
     eval_callback = CustomEvalCallback(online_eval_env, eval_freq=1500, deterministic=True)
 
@@ -48,8 +48,8 @@ if __name__ == "__main__":
                  train_freq=1,
                  gradient_steps=1
                  )
-    model.learn(total_timesteps=75_000, tb_log_name=f"{RUN_NAME}", callback=callbacks)
-    PIControllerPT2(log=True).eval(model, folder_name=RUN_NAME)
+    model.learn(total_timesteps=100_000, tb_log_name=f"{RUN_NAME}", callback=callbacks)
+    DirectControllerPT2(log=True).eval(model, folder_name=RUN_NAME)
     # #
     # # # save model if you want to
     model.save(f"eval\\{RUN_NAME}\\model")
