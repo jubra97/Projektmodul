@@ -124,9 +124,10 @@ class PIControllerPT2(gym.Env):
         T = control.timeresp._default_time_vector(self.open_loop_sys)
         # compute system gain
         # https://math.stackexchange.com/questions/2424383/how-should-i-interpret-the-static-gain-from-matlabs-command-zpkdata
-        U = np.ones_like(T) * self.w[0, 0] * (self.sim.obs_scale/self.open_loop_gain)
-        _, step_response, states = control.forced_response(self.open_loop_sys, T, U, return_x=True)
-        self.sim.last_state = np.concatenate((np.array([[0]]), np.array([states[:, -1]]).T))
+        # gain = (self.sim.sys.C @ np.linalg.inv(-self.sim.sys.A) @ self.sim.sys.B + self.sim.sys.D)[0][0]
+        # U = np.ones_like(T) * self.w[0] * (self.sim.obs_scale/gain)
+        # _, step_response, states = control.forced_response(self.sim.sys, T, U, return_x=True)
+        # self.sim.last_state = np.array([states[:, -1]]).T
 
         if self.log:
             self.episode_log["obs"]["last_set_points"] = []
@@ -186,7 +187,6 @@ class PIControllerPT2(gym.Env):
             noise = [0] * self.sim.n_sample_points
 
         sys_input = np.array([w, noise])
-
         return sys_input
 
     def _create_obs_with_vel(self):

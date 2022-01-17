@@ -24,8 +24,8 @@ class IOSim:
         self.simulation_time = simulation_time
         self.n_sample_points = int(model_freq * simulation_time)
         self.t = np.linspace(0, simulation_time, self.n_sample_points)
-        self.action_scale = action_scale
         self.obs_scale = obs_scale
+        self.action_scale = action_scale
 
         self.current_simulation_time = 0
         self.current_simulation_step = 0
@@ -52,7 +52,6 @@ class IOSim:
     def sim_one_step(self, w):
         start = self.current_simulation_step
         stop = self.current_simulation_step + self.model_steps_per_controller_update
-
         if self.last_state is None:
             sim_time, out_step, self.last_state = control.input_output_response(self.sys,
                                                                           self.t[start:stop+1],
@@ -66,11 +65,8 @@ class IOSim:
                                                                               X0=self.last_state[:, -1],
                                                                               return_x=True)
             except ValueError:
-                # print(self.t[start:stop:+1])
-                # print(w)
-                # print(w.shape)
-                #
-                # print(self.current_simulation_step)
+                print(self.t[start:stop:+1])
+                print(self.current_simulation_step)
                 sim_time, out_step, self.last_state = control.input_output_response(self.sys,
                                                                               self.t[start:stop],
                                                                               w[:, :-1],
