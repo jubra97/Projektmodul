@@ -27,10 +27,10 @@ class DirectControllerPT2(gym.Env):
         else:
             sys = control.tf([2], [0.001, 0.05, 1])
 
-        sys = control.tf([3.55e3], [0.00003, 0.0014, 1])  #  pt2 of dms
+        sys = control.tf([3.55e3], [0.00003, 0.0014, 1])  # pt2 of dms
 
         # create simulation object with an arbitrary tf.
-        self.sim = TfSim(sys, 10_000, 200, 100, action_scale=500, obs_scale=3_000_000, simulation_time=1.5)
+        self.sim = TfSim(sys, 12_000, 4000, 200, action_scale=500, obs_scale=3_000_000, simulation_time=1.5)
         self.sys_gain = (self.sim.sys.C @ np.linalg.inv(-self.sim.sys.A) @ self.sim.sys.B + self.sim.sys.D)[0][0]
 
         if reward_function == "discrete":
@@ -60,9 +60,9 @@ class DirectControllerPT2(gym.Env):
         self.oscillation_pen_fun = oscillation_pen_fun
         self.error_pen_fun = error_pen_fun
         # create fifo lists for newest simulation outcomes.
-        self.last_system_inputs = deque([0] * 3, maxlen=3)
-        self.last_system_outputs = deque([0] * 3, maxlen=3)
-        self.last_set_points = deque([0] * 3, maxlen=3)
+        self.last_system_inputs = deque([0] * 60, maxlen=60)
+        self.last_system_outputs = deque([0] * 60, maxlen=60)
+        self.last_set_points = deque([0] * 60, maxlen=60)
 
         self.w = []
 
@@ -118,7 +118,7 @@ class DirectControllerPT2(gym.Env):
         T = control.timeresp._default_time_vector(self.sim.sys)
         # compute system gain
         # https://math.stackexchange.com/questions/2424383/how-should-i-interpret-the-static-gain-from-matlabs-command-zpkdata
-        U = np.ones_like(T) * self.w[0] * (self.sim.obs_scale/self.sys_gain)
+        U = np.ones_like(T) * self.w[0] * (self.sim.obs_scale / self.sys_gain)
         _, step_response, states = control.forced_response(self.sim.sys, T, U, return_x=True)
         self.sim.last_state = np.array([states[:, -1]]).T
 
@@ -144,9 +144,11 @@ class DirectControllerPT2(gym.Env):
             self.episode_log["function"]["y"] = None
 
         # create start observation of new episode
-        self.last_system_inputs = deque([(self.w[0] * self.sim.obs_scale)/(self.sys_gain * self.sim.action_scale)] * 3, maxlen=3)
-        self.last_system_outputs = deque([(self.sim.last_state[:, -1] @ self.sim.sys.C.T)[0] / self.sim.obs_scale] * 3, maxlen=3)
-        self.last_set_points = deque([self.w[0]] * 3, maxlen=3)
+        self.last_system_inputs = deque(
+            [(self.w[0] * self.sim.obs_scale) / (self.sys_gain * self.sim.action_scale)] * 60, maxlen=60)
+        self.last_system_outputs = deque([(self.sim.last_state[:, -1] @ self.sim.sys.C.T)[0] / self.sim.obs_scale] * 60,
+                                         maxlen=60)
+        self.last_set_points = deque([self.w[0]] * 60, maxlen=60)
         obs = self.observation_function()
         return obs
 
@@ -265,8 +267,9 @@ class DirectControllerPT2(gym.Env):
         e = np.mean(w - y)
 
         # calculate action change
-        action_change = self.last_system_inputs[-(self.sim.sensor_steps_per_controller_update + 1)] \
-                        - self.last_system_inputs[-self.sim.sensor_steps_per_controller_update]
+        action_change = (self.last_system_inputs[-(self.sim.sensor_steps_per_controller_update + 1)]
+                         - self.last_system_inputs[-self.sim.sensor_steps_per_controller_update]) \
+                         * (1 / self.sim.sensor_steps_per_controller_update)
 
         pen_error = np.square(e)
         pen_action = np.square(action_change) * 0.01
@@ -290,8 +293,9 @@ class DirectControllerPT2(gym.Env):
         e = np.mean(w - y)
 
         # calculate action change
-        action_change = self.last_system_inputs[-(self.sim.sensor_steps_per_controller_update + 1)] \
-                        - self.last_system_inputs[-self.sim.sensor_steps_per_controller_update]
+        action_change = (self.last_system_inputs[-(self.sim.sensor_steps_per_controller_update + 1)]
+                         - self.last_system_inputs[-self.sim.sensor_steps_per_controller_update]) \
+                         * (1 / self.sim.sensor_steps_per_controller_update)
 
         abs_error = abs(e)
 
@@ -341,7 +345,8 @@ class DirectControllerPT2(gym.Env):
 
         if self.log:
             self.episode_log["action"]["value"].append(action[0] * self.sim.action_scale)
-            self.episode_log["action"]["change"].append((action[0] - self.last_system_inputs[-1]) * self.sim.action_scale)
+            self.episode_log["action"]["change"].append(
+                (action[0] - self.last_system_inputs[-1]) * self.sim.action_scale)
 
         # simulate system until next update of u.
         self.sim.sim_one_step(u=system_input_trajectory, add_noise=True)

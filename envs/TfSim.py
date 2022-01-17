@@ -94,10 +94,11 @@ class TfSim:
                                                                               u_scaled[:-1],
                                                                               X0=self.last_state[:, -1],
                                                                               return_x=True)
-        if add_noise:
-            out_step = out_step + np.random.normal(0, 0.005, size=out_step.shape[0])
 
         out_step = out_step / self.obs_scale
+
+        if add_noise:
+            out_step = out_step + np.random.normal(0, 0.0005, size=out_step.shape[0])
 
         if stop == len(self.t):
             self._sim_out = self._sim_out + out_step.tolist()
