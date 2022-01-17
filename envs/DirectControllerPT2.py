@@ -147,7 +147,7 @@ class DirectControllerPT2(gym.Env):
         self.last_system_inputs = deque([(self.w[0] * self.sim.obs_scale)/(self.sys_gain * self.sim.action_scale)] * 3, maxlen=3)
         self.last_system_outputs = deque([(self.sim.last_state[:, -1] @ self.sim.sys.C.T)[0] / self.sim.obs_scale] * 3, maxlen=3)
         self.last_set_points = deque([self.w[0]] * 3, maxlen=3)
-        obs = self.observation_function(first=False)
+        obs = self.observation_function()
         return obs
 
     def set_w(self, step_start=None, step_end=None, step_slope=None):

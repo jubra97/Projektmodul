@@ -13,7 +13,7 @@ from envs.IOSim import IOSim
 
 class PIControllerPT2(gym.Env):
 
-    def __init__(self, oscillating=True, log=False, reward_function="discrete", observation_function="obs_with_vel",
+    def __init__(self, oscillating=True, log=False, reward_function="normal", observation_function="obs_with_vel",
                  oscillation_pen_gain=3, oscillation_pen_fun=np.sqrt, error_pen_fun=None):
         """
         Create a gym environment to directly control the actuating value (u) of a system.
@@ -29,9 +29,9 @@ class PIControllerPT2(gym.Env):
         # sys = control.tf([3.55e3], [0.00003, 0.0014, 1])  #  pt2 of dms
         self.open_loop_sys = control.tf2ss(self.open_loop_sys)
 
-
         # create simulation object with an arbitrary tf.
         self.sim = IOSim(None, 10_000, 200, 100, action_scale=20, obs_scale=10, simulation_time=1.5)
+        self.open_loop_gain = (self.open_loop_sys.C @ np.linalg.inv(-self.open_loop_sys.A) @ self.open_loop_sys.B + self.open_loop_sys.D)[0][0]
 
         if reward_function == "discrete":
             self.reward_function = self._create_reward_discrete
@@ -66,6 +66,7 @@ class PIControllerPT2(gym.Env):
         self.last_is = deque([0] * 3, maxlen=3)
 
         self.w = []
+        self.first_step = False
 
         # create variables for logging
         self.episode_log = {"obs": {}, "rewards": {}, "action": {}, "function": {}}
@@ -81,9 +82,9 @@ class PIControllerPT2(gym.Env):
                                                 high=np.array([100] * obs_size, dtype=np.float32),
                                                 shape=(obs_size,),
                                                 dtype=np.float32)
-        self.action_space = gym.spaces.Box(low=np.array([-1], dtype=np.float32),
-                                           high=np.array([1], dtype=np.float32),
-                                           shape=(1,),
+        self.action_space = gym.spaces.Box(low=np.array([-1]*2, dtype=np.float32),
+                                           high=np.array([1]*2, dtype=np.float32),
+                                           shape=(2,),
                                            dtype=np.float32)
 
     def reset(self, step_start=None, step_end=None, step_slope=None, custom_w=None):
@@ -110,6 +111,7 @@ class PIControllerPT2(gym.Env):
             self.w = custom_w
         else:
             self.w = self.set_w(step_start, step_end, step_slope)
+        self.first_step = True
 
         # reset stuff that is only valid in the same episode
         self.last_system_inputs = deque([0] * 3, maxlen=3)
@@ -119,13 +121,12 @@ class PIControllerPT2(gym.Env):
         self.last_is = deque([0] * 3, maxlen=3)
 
         # set x0 in state space, to do so compute step response to given w[0]
-        # T = control.timeresp._default_time_vector(self.sim.sys)
+        T = control.timeresp._default_time_vector(self.open_loop_sys)
         # compute system gain
         # https://math.stackexchange.com/questions/2424383/how-should-i-interpret-the-static-gain-from-matlabs-command-zpkdata
-        # gain = (self.sim.sys.C @ np.linalg.inv(-self.sim.sys.A) @ self.sim.sys.B + self.sim.sys.D)[0][0]
-        # U = np.ones_like(T) * self.w[0] * (self.sim.obs_scale/gain)
-        # _, step_response, states = control.forced_response(self.sim.sys, T, U, return_x=True)
-        # self.sim.last_state = np.array([states[:, -1]]).T
+        U = np.ones_like(T) * self.w[0, 0] * (self.sim.obs_scale/self.open_loop_gain)
+        _, step_response, states = control.forced_response(self.open_loop_sys, T, U, return_x=True)
+        self.sim.last_state = np.concatenate((np.array([[0]]), np.array([states[:, -1]]).T))
 
         if self.log:
             self.episode_log["obs"]["last_set_points"] = []
@@ -140,19 +141,28 @@ class PIControllerPT2(gym.Env):
             self.episode_log["obs"]["set_point_vel"] = []
             self.episode_log["obs"]["input_vel"] = []
             self.episode_log["obs"]["outputs_vel"] = []
+            self.episode_log["obs"]["i"] = []
+            self.episode_log["obs"]["p"] = []
             self.episode_log["rewards"]["summed"] = []
             self.episode_log["rewards"]["pen_error"] = []
             self.episode_log["rewards"]["pen_action"] = []
             self.episode_log["action"]["value"] = []
             self.episode_log["action"]["change"] = []
+            self.episode_log["action"]["p_change"] = []
+            self.episode_log["action"]["i_change"] = []
+            self.episode_log["action"]["p_value"] = []
+            self.episode_log["action"]["i_value"] = []
             self.episode_log["function"]["w"] = None
             self.episode_log["function"]["y"] = None
 
         # create start observation of new episode
-        obs = self.observation_function(first=True)
+        self.last_system_inputs = deque([(self.w[0, 0] * self.sim.obs_scale)/(self.open_loop_gain * self.sim.action_scale)] * 3, maxlen=3)
+        self.last_system_outputs = deque([(states[:, -1] @ self.open_loop_sys.C.T)[0] / self.sim.obs_scale] * 3, maxlen=3)
+        self.last_set_points = deque([self.w[0, 0]] * 3, maxlen=3)
+        obs = self.observation_function()
         return obs
 
-    def set_w(self, step_start=None, step_end=None, step_slope=None):
+    def set_w(self, step_start=None, step_end=None, step_slope=None, add_noise=True):
         """
         Create reference value (w) as ramp or step
         :param step_height: Height of ramp/ step
@@ -169,9 +179,17 @@ class PIControllerPT2(gym.Env):
         w_step = np.linspace(w_before_step[0], step_end, int(step_slope * self.sim.model_freq)).tolist()
         w_after_step = [step_end] * int(self.sim.n_sample_points - len(w_before_step) - len(w_step))
         w = w_before_step + w_step + w_after_step
-        return w
 
-    def _create_obs_with_vel(self, first=False):
+        if add_noise:
+            noise = np.random.normal(0, 0.001, self.sim.n_sample_points)
+        else:
+            noise = [0] * self.sim.n_sample_points
+
+        sys_input = np.array([w, noise])
+
+        return sys_input
+
+    def _create_obs_with_vel(self):
         """
         Create observation consisting of: set point (w), system output (y), system input (u) and their derivations.
         :param first: True if first call in an episode (normally in reset()).
@@ -179,93 +197,89 @@ class PIControllerPT2(gym.Env):
         """
         set_points = np.array(list(self.last_set_points))
         system_outputs = np.array(list(self.last_system_outputs))
-        system_inputs = np.array(list(self.last_system_inputs))
+        p_s = np.array(list(self.last_ps))
+        i_s = np.array(list(self.last_is))
 
         outputs_vel = (system_outputs[-2] - system_outputs[-1]) * 1 / self.sim.sensor_steps_per_controller_update
-        input_vel = (system_inputs[-3] - system_inputs[-1]) * 1 / self.sim.model_steps_per_controller_update
         set_point_vel = (set_points[-2] - set_points[-1]) * 1 / self.sim.sensor_steps_per_controller_update
 
-        if first:
-            #  @ is matrix/vector multiply
-            obs = [self.w[0], system_inputs[-1], (self.sim.last_state[:, -1] @ self.sim.sys.C.T)[0] / self.sim.obs_scale,
-                   set_point_vel, input_vel, outputs_vel]
-        else:
-            obs = [set_points[-1], system_inputs[-1], system_outputs[-1], set_point_vel, input_vel, outputs_vel]
+        obs = [p_s[-1], i_s[-1], set_points[-1], system_outputs[-1], set_point_vel, outputs_vel]
 
         if self.log:
-            self.episode_log["obs"]["set_point"].append(obs[0])
-            self.episode_log["obs"]["system_input"].append(obs[1])
-            self.episode_log["obs"]["system_output"].append(obs[2])
-            self.episode_log["obs"]["set_point_vel"].append(obs[3])
-            self.episode_log["obs"]["input_vel"].append(obs[4])
+            self.episode_log["obs"]["p"].append(obs[0])
+            self.episode_log["obs"]["i"].append(obs[1])
+            self.episode_log["obs"]["set_point"].append(obs[2])
+            self.episode_log["obs"]["system_output"].append(obs[3])
+            self.episode_log["obs"]["set_point_vel"].append(obs[4])
             self.episode_log["obs"]["outputs_vel"].append(obs[5])
+
         return np.array(obs)
 
-    def _create_obs_last_states(self, first=False):
-        """
-        Create observation consisting of: last 3 set points (w), last 3 system outputs (y), last 3 system inputs (u).
-        :param first: True if first call in an episode (normally in reset()).
-        :return:
-        """
-        if first:
-            #  @ is matrix/vector multiply
-            obs = [0, 0, self.w[0]] + list(self.last_system_inputs) +\
-                  [0, 0, (self.sim.last_state[:, -1] @ self.sim.sys.C.T)[0] / self.sim.obs_scale]
-        else:
-            obs = list(self.last_set_points) + list(self.last_system_inputs) + list(self.last_system_outputs)
-
-        if self.log:
-            self.episode_log["obs"]["last_set_points"].append(list(obs[0:3]))
-            self.episode_log["obs"]["last_system_inputs"].append(list(obs[3:6]))
-            self.episode_log["obs"]["last_system_outputs"].append(list(obs[6:9]))
-        return np.array(obs)
-
-    def _create_obs_errors_with_vel(self, first=False):
-        """
-        Create observation consisting of: system error (e), system input (u) and their derivations.
-        :param first: True if first call in an episode (normally in reset()).
-        :return:
-        """
-        set_points = np.array(list(self.last_set_points))
-        system_outputs = np.array(list(self.last_system_outputs))
-        system_inputs = np.array(list(self.last_system_inputs))
-        errors = (set_points - system_outputs).tolist()
-
-        error_vel = (errors[-2] - errors[-1]) * 1 / self.sim.sensor_steps_per_controller_update
-        input_vel = (system_inputs[-3] - system_inputs[-1]) * 1 / self.sim.model_steps_per_controller_update
-
-        if first:
-            error = self.w[0] - system_outputs[-1]
-            obs = [error, system_inputs[-1], error_vel, input_vel]
-        else:
-            obs = [errors[0], system_inputs[-1], error_vel, input_vel]
-
-        if self.log:
-            self.episode_log["obs"]["error"].append(obs[0])
-            self.episode_log["obs"]["system_input"].append(obs[1])
-            self.episode_log["obs"]["error_vel"].append(obs[2])
-            self.episode_log["obs"]["input_vel"].append(obs[3])
-        return np.array(obs)
-
-    def _create_obs_last_errors(self, first=False):
-        """
-        Create observation consisting of: last 3 system errors (e), last 3 system inputs (u).
-        :param first: True if first call in an episode (normally in reset()).
-        :return:
-        """
-        set_points = np.array(list(self.last_set_points))
-        system_outputs = np.array(list(self.last_system_outputs))
-        errors = (set_points - system_outputs).tolist()
-
-        if first:
-            obs = errors + list(self.last_system_inputs)
-        else:
-            obs = errors + list(self.last_system_inputs)
-
-        if self.log:
-            self.episode_log["obs"]["errors"].append(obs[0:3])
-            self.episode_log["obs"]["last_system_inputs"].append(obs[3:6])
-        return np.array(obs)
+    # def _create_obs_last_states(self, first=False):
+    #     """
+    #     Create observation consisting of: last 3 set points (w), last 3 system outputs (y), last 3 system inputs (u).
+    #     :param first: True if first call in an episode (normally in reset()).
+    #     :return:
+    #     """
+    #     if first:
+    #         #  @ is matrix/vector multiply
+    #         obs = [0, 0, self.w[0]] + list(self.last_system_inputs) +\
+    #               [0, 0, (self.sim.last_state[:, -1] @ self.sim.sys.C.T)[0] / self.sim.obs_scale]
+    #     else:
+    #         obs = list(self.last_set_points) + list(self.last_system_inputs) + list(self.last_system_outputs)
+    #
+    #     if self.log:
+    #         self.episode_log["obs"]["last_set_points"].append(list(obs[0:3]))
+    #         self.episode_log["obs"]["last_system_inputs"].append(list(obs[3:6]))
+    #         self.episode_log["obs"]["last_system_outputs"].append(list(obs[6:9]))
+    #     return np.array(obs)
+    #
+    # def _create_obs_errors_with_vel(self, first=False):
+    #     """
+    #     Create observation consisting of: system error (e), system input (u) and their derivations.
+    #     :param first: True if first call in an episode (normally in reset()).
+    #     :return:
+    #     """
+    #     set_points = np.array(list(self.last_set_points))
+    #     system_outputs = np.array(list(self.last_system_outputs))
+    #     system_inputs = np.array(list(self.last_system_inputs))
+    #     errors = (set_points - system_outputs).tolist()
+    #
+    #     error_vel = (errors[-2] - errors[-1]) * 1 / self.sim.sensor_steps_per_controller_update
+    #     input_vel = (system_inputs[-3] - system_inputs[-1]) * 1 / self.sim.model_steps_per_controller_update
+    #
+    #     if first:
+    #         error = self.w[0] - system_outputs[-1]
+    #         obs = [error, system_inputs[-1], error_vel, input_vel]
+    #     else:
+    #         obs = [errors[0], system_inputs[-1], error_vel, input_vel]
+    #
+    #     if self.log:
+    #         self.episode_log["obs"]["error"].append(obs[0])
+    #         self.episode_log["obs"]["system_input"].append(obs[1])
+    #         self.episode_log["obs"]["error_vel"].append(obs[2])
+    #         self.episode_log["obs"]["input_vel"].append(obs[3])
+    #     return np.array(obs)
+    #
+    # def _create_obs_last_errors(self, first=False):
+    #     """
+    #     Create observation consisting of: last 3 system errors (e), last 3 system inputs (u).
+    #     :param first: True if first call in an episode (normally in reset()).
+    #     :return:
+    #     """
+    #     set_points = np.array(list(self.last_set_points))
+    #     system_outputs = np.array(list(self.last_system_outputs))
+    #     errors = (set_points - system_outputs).tolist()
+    #
+    #     if first:
+    #         obs = errors + list(self.last_system_inputs)
+    #     else:
+    #         obs = errors + list(self.last_system_inputs)
+    #
+    #     if self.log:
+    #         self.episode_log["obs"]["errors"].append(obs[0:3])
+    #         self.episode_log["obs"]["last_system_inputs"].append(obs[3:6])
+    #     return np.array(obs)
 
     def _create_reward(self):
         """
@@ -277,13 +291,16 @@ class PIControllerPT2(gym.Env):
         y = np.array(list(self.last_system_outputs)[-self.sim.sensor_steps_per_controller_update:])
         w = np.array(list(self.last_set_points)[-self.sim.sensor_steps_per_controller_update:])
         e = np.mean(w - y)
+        u = np.array(list(self.last_system_inputs)[-2:])
+        u_change = abs(u[-1] - u[-2])
+
 
         # calculate action change
         action_change = self.last_system_inputs[-(self.sim.sensor_steps_per_controller_update + 1)] \
                         - self.last_system_inputs[-self.sim.sensor_steps_per_controller_update]
 
         pen_error = np.square(e)
-        pen_action = np.square(action_change) * 0.01
+        pen_action = np.square(u_change) * 0.01
         # pen_integrated = np.square(self.integrated_error) * 0
 
         reward = 0
@@ -293,52 +310,52 @@ class PIControllerPT2(gym.Env):
         if self.log:
             self.episode_log["rewards"]["summed"].append(reward)
             self.episode_log["rewards"]["pen_error"].append(-pen_error)
-            self.episode_log["rewards"]["pen_action"].append(-pen_action)
+            self.episode_log["rewards"]["pen_action"].append(-u_change)
 
         return reward
 
-    def _create_reward_discrete(self):
-        # get latest system attributes and calculate error/ integrated error
-        y = np.array(list(self.last_system_outputs)[-self.sim.sensor_steps_per_controller_update:])
-        w = np.array(list(self.last_set_points)[-self.sim.sensor_steps_per_controller_update:])
-        e = np.mean(w - y)
-
-        # calculate action change
-        action_change = self.last_system_inputs[-(self.sim.sensor_steps_per_controller_update + 1)] \
-                        - self.last_system_inputs[-self.sim.sensor_steps_per_controller_update]
-
-        abs_error = abs(e)
-
-        if self.error_pen_fun:
-            pen_error = self.error_pen_fun(abs(e))
-        else:
-            pen_error = abs(e)
-
-        if self.oscillation_pen_fun:
-            pen_action = self.oscillation_pen_fun(abs(action_change)) * self.oscillation_pen_gain
-        else:
-            pen_action = abs(action_change) * self.oscillation_pen_gain
-
-        reward = 0
-        if abs_error < 0.5:
-            reward += 1
-        if abs_error < 0.1:
-            reward += 2
-        if abs_error < 0.05:
-            reward += 3
-        if abs_error < 0.02:
-            reward += 5
-        if abs_error < 0.005:
-            reward += 10
-
-        reward -= pen_error
-        reward -= pen_action
-
-        if self.log:
-            self.episode_log["rewards"]["summed"].append(reward)
-            self.episode_log["rewards"]["pen_action"].append(-pen_action)
-            self.episode_log["rewards"]["pen_error"].append(-pen_error)
-        return reward
+    # def _create_reward_discrete(self):
+    #     # get latest system attributes and calculate error/ integrated error
+    #     y = np.array(list(self.last_system_outputs)[-self.sim.sensor_steps_per_controller_update:])
+    #     w = np.array(list(self.last_set_points)[-self.sim.sensor_steps_per_controller_update:])
+    #     e = np.mean(w - y)
+    #
+    #     # calculate action change
+    #     action_change = self.last_system_inputs[-(self.sim.sensor_steps_per_controller_update + 1)] \
+    #                     - self.last_system_inputs[-self.sim.sensor_steps_per_controller_update]
+    #
+    #     abs_error = abs(e)
+    #
+    #     if self.error_pen_fun:
+    #         pen_error = self.error_pen_fun(abs(e))
+    #     else:
+    #         pen_error = abs(e)
+    #
+    #     if self.oscillation_pen_fun:
+    #         pen_action = self.oscillation_pen_fun(abs(action_change)) * self.oscillation_pen_gain
+    #     else:
+    #         pen_action = abs(action_change) * self.oscillation_pen_gain
+    #
+    #     reward = 0
+    #     if abs_error < 0.5:
+    #         reward += 1
+    #     if abs_error < 0.1:
+    #         reward += 2
+    #     if abs_error < 0.05:
+    #         reward += 3
+    #     if abs_error < 0.02:
+    #         reward += 5
+    #     if abs_error < 0.005:
+    #         reward += 10
+    #
+    #     reward -= pen_error
+    #     reward -= pen_action
+    #
+    #     if self.log:
+    #         self.episode_log["rewards"]["summed"].append(reward)
+    #         self.episode_log["rewards"]["pen_action"].append(-pen_action)
+    #         self.episode_log["rewards"]["pen_error"].append(-pen_error)
+    #     return reward
 
     def step(self, action):
         """
@@ -348,8 +365,10 @@ class PIControllerPT2(gym.Env):
         :return:
         """
 
-        controller_p = np.clip(action[0] + 1, 0, 2)
-        controller_i = np.clip(action[1] + 1, 0, 2)
+        # system is not defined if p and i is zero
+        smallest_possible_pos_value = np.nextafter(0, 1)
+        controller_p = np.clip(action[0] + 1, smallest_possible_pos_value, 2)
+        controller_i = np.clip(action[1] + 1, smallest_possible_pos_value, 2)
 
         # create static input for every simulation step until next update of u.
         system_input_trajectory = [action[0]] * (self.sim.model_steps_per_controller_update + 1)
@@ -362,8 +381,7 @@ class PIControllerPT2(gym.Env):
 
         # update system with new p and i; simulate next time step
         self.sim.sys = self.create_io_sys(controller_p, controller_i)
-        self.sim.sim_one_step(w=self.w[:,
-                                self.sim.current_simulation_step:self.sim.current_simulation_step + self.sim.model_steps_per_controller_update + 1])
+        self.sim.sim_one_step(w=self.w[:, self.sim.current_simulation_step:self.sim.current_simulation_step+self.sim.model_steps_per_controller_update+1])
 
         # update fifo lists with newest values. In simulation a simulation sample time, a sensor sample time, and a u
         # update sample time is used. A smaller simulation sample time used for more precise simulation results.
@@ -388,12 +406,21 @@ class PIControllerPT2(gym.Env):
             done = False
 
         # create obs and reward
-        obs = self.observation_function(first=False)
+        obs = self.observation_function()
         reward = self.reward_function()
+        self.first_step = False
         return obs, reward, done, {}
 
     def create_io_sys(self, p, i):
+        p = p * self.sim.action_scale
+        i = i * self.sim.action_scale
+
         pi_controller = control.tf2ss(control.tf([p, i], [1, 0]))
+        if self.first_step:
+            if i > 0:
+                self.sim.last_state[0, 0] = self.w[0, 0] / (i * self.open_loop_gain)
+            else:
+                self.sim.last_state[0, 0] = 0
 
         io_open_loop = control.LinearIOSystem(self.open_loop_sys, inputs="u", outputs="y", name="open_loop")
         io_pi = control.LinearIOSystem(pi_controller, inputs="e", outputs="u", name="controller")
@@ -467,11 +494,11 @@ class PIControllerPT2(gym.Env):
         ax[1][1].grid()
         ax[1][1].legend()
 
-        ax[1][2].set_title("FFT")
-        actions_fft, actions_fftfreq, N, sm = self.eval_fft()
-        ax[1][2].plot(actions_fftfreq, 2 / N * np.abs(actions_fft[0:N // 2]))
-        ax[1][2].text(0.5, 0.9, f"Smoothness: {sm}", transform=ax[1][2].transAxes)
-        ax[1][2].grid()
+        # ax[1][2].set_title("FFT")
+        # actions_fft, actions_fftfreq, N, sm = self.eval_fft()
+        # ax[1][2].plot(actions_fftfreq, 2 / N * np.abs(actions_fft[0:N // 2]))
+        # ax[1][2].text(0.5, 0.9, f"Smoothness: {sm}", transform=ax[1][2].transAxes)
+        # ax[1][2].grid()
 
         fig.tight_layout()
         return fig
