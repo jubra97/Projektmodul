@@ -1,19 +1,10 @@
-import os
-import warnings
-from typing import Any, Dict, Optional, Union
-
-import gym
-import numpy as np
+import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import pandas as pd
 from stable_baselines3.common.callbacks import EventCallback, BaseCallback
 from stable_baselines3.common.logger import Figure
+import torch as th
 
-from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, sync_envs_normalization
-
-
-class CustomEvalCallback(EventCallback):
+class CustomEvalCallback(BaseCallback):
     """
     Callback for evaluating an agent.
 
@@ -52,77 +43,58 @@ class CustomEvalCallback(EventCallback):
         self.n_eval_episodes = n_eval_episodes
         self.eval_freq = eval_freq
         self.deterministic = deterministic
-
+        self.evaluate = False
         self.eval_env = eval_env
 
-
-    def _init_callback(self) -> None:
-        pass
+    # def _init_callback(self):
+    #     print(type(self.model.actor))
+    #     import torch as th
+    #     self.logger.output_formats[1].writer.add_graph(self.model.actor.mu, th.Tensor([1] * 7).to(self.model.device))
+    #     print("A")
+    #     # import torch.nn as nn
+    #     # def init_with_zero(m):
+    #     #     if type(m) == nn.Linear:
+    #     #         nn.init.zeros_(m.weight)
+    #     #         # nn.init.zeros_(m.bias)
+    #     # self.model.actor.mu.apply(init_with_zero)
+    #     # print("A")
+    #     # print("B")
 
     def _on_step(self) -> bool:
 
         if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
-            # crete eval env
-            print("Start Log")
-            env = self.eval_env()
+            self.evaluate = True
+        #     # crete eval env
+        #     print("Start Log")
+        #
+        #     ob = self.eval_env.reset()
+        #     done = False
+        #     while done is not True:
+        #         action, _states = self.model.predict(ob, deterministic=self.deterministic)
+        #         ob, reward, done, info = self.eval_env.step(action)
+        #
+        #     print(f"Logging Image Call Nr: {self.n_calls}")
+        #     fig = self.eval_env.create_eval_plot()
+        #     self.logger.record("Overview/A", Figure(fig, close=True), exclude=("stdout", "log", "json", "csv"))
+        #     plt.close()
+        #     # first_layer_weight = self.model.actor.mu._modules["0"].weight
+        #     # self.logger.output_formats[1].writer.add_histogram("test", first_layer_weight, self.n_calls)
 
-            ob = env.reset()
+        return True
+
+
+    def _on_rollout_end(self) -> None:
+        if self.evaluate:
+            self.evaluate = False
+            ob = self.eval_env.reset()
             done = False
             while done is not True:
                 action, _states = self.model.predict(ob, deterministic=self.deterministic)
-                ob, reward, done, info = env.step(action)
+                ob, reward, done, info = self.eval_env.step(action)
 
             print(f"Logging Image Call Nr: {self.n_calls}")
-            samples_per_episode = int(env.simulation_time * env.controller_sample_frequency)
-            sim_time = np.linspace(0, env.simulation_time, samples_per_episode)
-
-            fig, ax = plt.subplots(2, 3, figsize=(20, 10))
-
-            # plot obs axes
-            ax[0][0].set_title("Obs")
-            obs = np.array(env.observations_log)
-            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 0], label="Error")
-            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 1], label="Integrated Error")
-            ax[0][0].plot(sim_time, obs[-samples_per_episode:, 2] * 100, label="Derived Error (*100)")
-            ax[0][0].grid()
-            ax[0][0].legend()
-
-            # plt action axes
-            action_data = pd.DataFrame(env.actions_log[-samples_per_episode:]).to_dict(orient="list")
-            ax[0][1].set_title("Action")
-            ax[0][1].plot(sim_time, action_data["reference_value"][-samples_per_episode:], label="Reference Value")
-            ax[0][1].plot(sim_time, action_data["action"][-samples_per_episode:], label="Action")
-            ax[0][1].grid()
-            ax[0][1].legend()
-
-            # go back from list of dicts to dict of lists
-            reward_data = pd.DataFrame(env.rewards_log[-samples_per_episode:]).to_dict(orient="list")
-
-            # plt reward axes
-            ax[1][0].set_title("Reward")
-            ax[1][0].plot(sim_time, reward_data["reward"], label="Reward")
-            ax[1][0].grid()
-            ax[1][0].legend()
-
-            # plt reward shares
-            ax[1][1].set_title("Reward Shares")
-            ax[1][1].plot(sim_time, reward_data["pen_error"], label="Error Share")
-            ax[1][1].plot(sim_time, reward_data["pen_integrated"], label="Integrated Error Share")
-            ax[1][1].plot(sim_time, reward_data["pen_action"], label="Action Share")
-            ax[1][1].grid()
-            ax[1][1].legend()
-
-            # plt u and out
-            ax[0][2].set_title("Function")
-            ax[0][2].plot(env.t, env.u, label="Set Point")
-            ax[0][2].plot(env.t, env.out, label="Output")
-            ax[0][2].grid()
-            ax[0][2].legend()
-
-            fig.tight_layout()
+            fig = self.eval_env.create_eval_plot()
             self.logger.record("Overview/A", Figure(fig, close=True), exclude=("stdout", "log", "json", "csv"))
             plt.close()
-
-            del env
-
-        return True
+            # first_layer_weight = self.model.actor.mu._modules["0"].weight
+            # self.logger.output_formats[1].writer.add_histogram("test", first_layer_weight, self.n_calls)
