@@ -30,7 +30,7 @@ class DirectControllerPT2(gym.Env):
         sys = control.tf([3.55e3], [0.00003, 0.0014, 1])  # pt2 of dms
 
         # create simulation object with an arbitrary tf.
-        self.sim = TfSim(sys, 12_000, 4000, 200, action_scale=500, obs_scale=3_000_000, simulation_time=1.5)
+        self.sim = TfSim(sys, 12_000, 4000, 100, action_scale=500, obs_scale=3_000_000, simulation_time=1.5)
         self.sys_gain = (self.sim.sys.C @ np.linalg.inv(-self.sim.sys.A) @ self.sim.sys.B + self.sim.sys.D)[0][0]
 
         if reward_function == "discrete":
@@ -55,7 +55,7 @@ class DirectControllerPT2(gym.Env):
                 "No corresponding observation function could be found. If you want to add your own observation"
                 "function add the function to this if else block.")
 
-        self.oscillation_pen_gain_raising = np.linspace(0, 20, 670)
+        # self.oscillation_pen_gain_raising = np.linspace(0, 20, 670)
         self.oscillation_pen_gain = oscillation_pen_gain
         self.oscillation_pen_fun = oscillation_pen_fun
         self.error_pen_fun = error_pen_fun
@@ -104,8 +104,8 @@ class DirectControllerPT2(gym.Env):
         self.sim.reset()
 
         # self.oscillation_pen_gain = self.oscillation_pen_gain_raising[self.n_episodes]
-        print(self.oscillation_pen_gain)
-        print(self.n_episodes)
+        # print(self.oscillation_pen_gain)
+        # print(self.n_episodes)
 
         # create reference value (w)
         if custom_w is not None:

@@ -35,6 +35,9 @@ class DirectControllerOnlineConnection:
         self.last_runs = []
         self.reset_triggered = True
 
+        self.sample_freq = 5000
+        self.n_updates = 0
+
         self.plc = pyads.Connection('192.168.10.200.1.1', 352)
         self.plc.open()
         # symbols = self.plc.get_all_symbols()
@@ -42,11 +45,11 @@ class DirectControllerOnlineConnection:
         #     print(sym)
 
         self.ads_buffer_sps = self.plc.get_symbol("Object3 (RL_Learn_DirectControl).Output.ads_buffer", array_size=20)
-        attr = pyads.NotificationAttrib(length=sizeof(AdsBuffer), trans_mode=pyads.ADSTRANS_SERVERCYCLE, max_delay=1.0, cycle_time=5.0)
+        attr = pyads.NotificationAttrib(length=sizeof(AdsBuffer), trans_mode=pyads.ADSTRANS_SERVERCYCLE, max_delay=1.0, cycle_time=2.0)
         self.ads_buffer_sps.add_device_notification(self.update_obs, attr)
 
         self.input_u = self.plc.get_symbol("Object3 (RL_Learn_DirectControl).Input.goal_torque")
-        self.reset_trigger = self.plc.get_symbol("Object4 (RL_Learn_PIControl).Input.In1")
+        self.reset_trigger = self.plc.get_symbol("Object3 (RL_Learn_DirectControl).Input.In1")
 
     def reset(self):
         print("reset called")
@@ -83,10 +86,12 @@ class DirectControllerOnlineConnection:
 
         with self.ads_buffer_mutex:
             if not self.last_t:
-                self.last_t = t
-                self.last_w = w
-                self.last_u = u
-                self.last_y = y
+                first_t_non_zero = (np.array(t) != 0).tolist().index(1)
+
+                self.last_t = t[first_t_non_zero - 1:]
+                self.last_w = w[first_t_non_zero - 1:]
+                self.last_u = u[first_t_non_zero - 1:]
+                self.last_y = y[first_t_non_zero - 1:]
 
             else:
                 # check which data is new
@@ -114,8 +119,12 @@ if __name__ == "__main__":
     env = DirectControllerOnlineConnection()
 
     for i in range(1):
-        print(i)
-        time.sleep(60)
+        env.reset()
+        # print(i * 50)
+        # env.set_pi(0.3 * i, 0.1 * i)
+        time.sleep(10)
+    for run in env.last_runs:
+        print(run["t"][0])
 
     with env.ads_buffer_mutex:
         plt.plot(env.last_t, env.last_w)
