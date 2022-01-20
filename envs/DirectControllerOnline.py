@@ -159,12 +159,13 @@ class DirectControllerOnline(gym.Env):
         """
 
         # only possible if online data is available
-        if self.y.size > 0:
-            y = np.array(self.y)
-            w = np.array(self.w)
-            e = np.mean(w - y)  # control error
-        else:
+        if self.y.size < 2:
             return 0
+
+        # compute control error
+        y = np.array(self.y)
+        w = np.array(self.w)
+        e = np.mean(w - y)
 
         # add a penalty for changing u to achieve a non oscillating u / system
         if self.last_u is None or current_u is None:
