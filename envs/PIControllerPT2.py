@@ -316,7 +316,6 @@ class PIControllerPT2(gym.Env):
             self.episode_log["rewards"]["pen_error"].append(-pen_error)
             self.episode_log["rewards"]["pen_action"].append(-pen_action)
 
-
         return reward
 
     def _create_reward_discrete(self):

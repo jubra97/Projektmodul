@@ -10,6 +10,9 @@ BUFFER_SIZE = 20
 
 
 class AdsBuffer(Structure):
+    """
+    Class that represents the output buffer that can be read via ads.
+    """
 
     _fields_ = [
 
@@ -23,6 +26,12 @@ class AdsBuffer(Structure):
 
 class DirectControllerOnlineConnection:
     def __init__(self):
+        """
+        Connection via ADS to read and write data to a simulink model. TODO: Add model name and add model to git repo
+        The model variables are pulled with 500Hz while the model on the SPS is running with 4kHz. Because the SPS model
+        uses an output buffer every timestep can be read. Because the data is updated via a callback function a mutex is
+        needed to read and write to sample data.
+        """
         self.last_timestamps = []
         self.last_timestamp = 0
 
@@ -40,6 +49,8 @@ class DirectControllerOnlineConnection:
 
         self.plc = pyads.Connection('192.168.10.200.1.1', 352)
         self.plc.open()
+
+        # if you add a new in/output you can get a list of all ads variables here.
         # symbols = self.plc.get_all_symbols()
         # for sym in symbols:
         #     print(sym)
@@ -52,6 +63,10 @@ class DirectControllerOnlineConnection:
         self.reset_trigger = self.plc.get_symbol("Object3 (RL_Learn_DirectControl).Input.In1")
 
     def reset(self):
+        """
+        Reset saved samples and also trigger reset of the model on the sps.
+        :return:
+        """
         print("reset called")
         self.reset_triggered = True
         with self.ads_buffer_mutex:
@@ -71,6 +86,13 @@ class DirectControllerOnlineConnection:
         self.reset_triggered = False
 
     def update_obs(self, notification, data):
+        """
+        Callback when new data is received. Save data two class variables. The received data possesses a field with
+        timestamps. Those are used two only save new data.
+        :param notification:
+        :param data:
+        :return:
+        """
         if self.reset_triggered:
             return
 
@@ -112,6 +134,11 @@ class DirectControllerOnlineConnection:
                 self.last_y += y[index_first_new_value:]
 
     def set_u(self, u):
+        """
+        Write u to sps model.
+        :param u: U
+        :return:
+        """
         self.input_u.write(u)
 
 

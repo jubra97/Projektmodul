@@ -5,8 +5,15 @@ import copy
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 class DirectControllerOnline(gym.Env):
-    def __init__(self, online_sys=None, sample_freq=5000, log=True):
+    def __init__(self, online_sys=None, sample_freq=4000, log=True):
+        """
+        Create a gym environment to directly control the actuating value (u) the given online system.
+        :param online_sys: Connection to the online system.
+        :param sample_freq:
+        :param log: Log data?
+        """
         super(DirectControllerOnline).__init__()
 
         self.online_system = online_sys
@@ -26,10 +33,7 @@ class DirectControllerOnline(gym.Env):
         self.last_u = None
 
         self.last_step_time = None
-
-        self.last_reset_call = None
-        self.integrated_error = 0
-        self.abs_integrated_error = 0
+        self.last_reset_time = None
 
         self.observation_space = gym.spaces.Box(low=np.array([-100]*6), high=np.array([100]*6),
                                                 shape=(6,),
@@ -38,26 +42,27 @@ class DirectControllerOnline(gym.Env):
                                            dtype=np.float32)
 
     def reset(self):
-        ###
-        # Reset is done after final step and before learning. Reset is not called after learning!
-        ###
+        """
+        Reset episode.
+        :return:
+        """
+        # print time between two reset calls
+        if self.last_reset_time is not None:
+            print(time.perf_counter() - self.last_reset_time)
+        self.last_reset_time = time.perf_counter()
 
-        if self.last_reset_call is not None:
-            print(time.perf_counter() - self.last_reset_call)
-        self.last_reset_call = time.perf_counter()
-
-        if self.n_episodes != 0:
+        if self.n_episodes != 0 and self.log:
             self.log_all.append(self.episode_log)
         self.n_episodes += 1
         print(f"Episode: {self.n_episodes}")
         print(f"Timesteps: {self.timesteps_last_episode}")
-        self.online_sys_needs_reset = True
-
         self.timesteps_last_episode = 0
 
-        self.integrated_error = 0
-        self.abs_integrated_error = 0
-        self.last_step_time = 0
+        # Reset is done after final step of episode and not before the first stop of the next episode. So you have to
+        # set a flag to reset the online system in the first learning step.
+        self.online_sys_needs_reset = True
+
+        self.last_step_time = None
         self.last_u = None
 
         self.episode_log["obs"]["set_point"] = []
@@ -76,6 +81,8 @@ class DirectControllerOnline(gym.Env):
         self.episode_log["function"]["w"] = []
         self.episode_log["function"]["y"] = []
 
+        # get first data from online system and create observation with it
+        self.update_input()
         obs = self.create_obs(None)
         return obs
 
@@ -148,11 +155,6 @@ class DirectControllerOnline(gym.Env):
             action_change = abs(current_u - self.last_u)
             pen_action = np.sqrt(action_change) * 3
 
-        # self.integrated_error = self.integrated_error + e * (1/self.online_system.sample_freq)
-        # self.integrated_error = np.clip(self.integrated_error, -0.3, 0.3)
-        # self.abs_integrated_error = self.abs_integrated_error + abs(e) * (1/self.online_system.sample_freq)
-        # self.abs_integrated_error = np.clip(self.abs_integrated_error, 0, 20)
-
         if self.u is None:
             return 0
 
@@ -184,7 +186,13 @@ class DirectControllerOnline(gym.Env):
         return reward
 
     def create_obs(self, current_u):
+        """
+        Create Observation consistent of [set_point (w), system_input (u), system_output (y), dot_w, dot_u, dot_y]
+        :param current_u: Current u (action)
+        :return:
+        """
         if self.w.size < 2:
+            print("Passiert wohl noch")
             return [0, 0, 0, 0, 0, 0]
 
         set_point = self.w[-1]
@@ -192,7 +200,7 @@ class DirectControllerOnline(gym.Env):
         system_output = self.y[-1]
         system_output_vel = (self.y[-1] - self.y[-2]) * 1 / self.sample_freq
         system_input = (self.u[-1] / 250) - 1
-        if self.last_u is None:
+        if self.last_u is None or current_u is None:
             input_vel = 0
         else:
             input_vel = (current_u - self.last_u) * 1 / self.sample_freq
