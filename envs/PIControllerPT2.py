@@ -13,8 +13,8 @@ from envs.IOSim import IOSim
 
 class PIControllerPT2(gym.Env):
 
-    def __init__(self, oscillating=True, log=False, reward_function="normal", observation_function="obs_with_vel",
-                 oscillation_pen_gain=3, oscillation_pen_fun=np.sqrt, error_pen_fun=None):
+    def __init__(self, oscillating=True, log=False, reward_function="discrete", observation_function="obs_with_vel",
+                 oscillation_pen_gain=1, oscillation_pen_fun=np.sqrt, error_pen_fun=None):
         """
         Create a gym environment to directly control the actuating value (u) of a system.
         :param oscillating: If True a
@@ -30,7 +30,7 @@ class PIControllerPT2(gym.Env):
         self.open_loop_sys = control.tf2ss(self.open_loop_sys)
 
         # create simulation object with an arbitrary tf.
-        self.sim = IOSim(None, 10_000, 200, 100, action_scale=20, obs_scale=10, simulation_time=1.5)
+        self.sim = IOSim(None, 10_000, 200, 100, action_scale=5, obs_scale=1, simulation_time=1.5)
         self.open_loop_gain = (self.open_loop_sys.C @ np.linalg.inv(-self.open_loop_sys.A) @ self.open_loop_sys.B + self.open_loop_sys.D)[0][0]
 
         if reward_function == "discrete":
@@ -125,9 +125,9 @@ class PIControllerPT2(gym.Env):
         # compute system gain
         # https://math.stackexchange.com/questions/2424383/how-should-i-interpret-the-static-gain-from-matlabs-command-zpkdata
         # gain = (self.sim.sys.C @ np.linalg.inv(-self.sim.sys.A) @ self.sim.sys.B + self.sim.sys.D)[0][0]
-        # U = np.ones_like(T) * self.w[0] * (self.sim.obs_scale/gain)
-        # _, step_response, states = control.forced_response(self.sim.sys, T, U, return_x=True)
-        # self.sim.last_state = np.array([states[:, -1]]).T
+        U = np.ones_like(T) * self.w[0][0] * (self.sim.obs_scale/self.open_loop_gain)
+        _, step_response, states = control.forced_response(self.open_loop_sys, T, U, return_x=True)
+        self.sim.last_state = np.concatenate((np.array([[0]]), states[:, -1:]))
 
         if self.log:
             self.episode_log["obs"]["last_set_points"] = []
@@ -171,9 +171,9 @@ class PIControllerPT2(gym.Env):
         :return:
         """
         if step_start is None:
-            step_start = np.random.uniform(-1, 1)
+            step_start = np.random.uniform(0, 0.5)
         if step_end is None:
-            step_end = np.random.uniform(-1, 1)
+            step_end = np.random.uniform(0, 0.5)
         if step_slope is None:
             step_slope = np.random.uniform(0, 0.5)
         w_before_step = [step_start] * int(0.5 * self.sim.model_freq)
@@ -294,13 +294,17 @@ class PIControllerPT2(gym.Env):
         u = np.array(list(self.last_system_inputs)[-2:])
         u_change = abs(u[-1] - u[-2])
 
+        if e > 1_000_000:
+            print(f"E: {e}")
+            print(f"P: {self.p}")
+            print(f"I: {self.i}")
 
         # calculate action change
         action_change = self.last_system_inputs[-(self.sim.sensor_steps_per_controller_update + 1)] \
                         - self.last_system_inputs[-self.sim.sensor_steps_per_controller_update]
 
-        pen_error = np.square(e)
-        pen_action = np.square(u_change) * 0.01
+        pen_error = np.abs(e)
+        pen_action = np.sqrt(u_change) * 0.1
         # pen_integrated = np.square(self.integrated_error) * 0
 
         reward = 0
@@ -310,52 +314,55 @@ class PIControllerPT2(gym.Env):
         if self.log:
             self.episode_log["rewards"]["summed"].append(reward)
             self.episode_log["rewards"]["pen_error"].append(-pen_error)
-            self.episode_log["rewards"]["pen_action"].append(-u_change)
+            self.episode_log["rewards"]["pen_action"].append(-pen_action)
+
 
         return reward
 
-    # def _create_reward_discrete(self):
-    #     # get latest system attributes and calculate error/ integrated error
-    #     y = np.array(list(self.last_system_outputs)[-self.sim.sensor_steps_per_controller_update:])
-    #     w = np.array(list(self.last_set_points)[-self.sim.sensor_steps_per_controller_update:])
-    #     e = np.mean(w - y)
-    #
-    #     # calculate action change
-    #     action_change = self.last_system_inputs[-(self.sim.sensor_steps_per_controller_update + 1)] \
-    #                     - self.last_system_inputs[-self.sim.sensor_steps_per_controller_update]
-    #
-    #     abs_error = abs(e)
-    #
-    #     if self.error_pen_fun:
-    #         pen_error = self.error_pen_fun(abs(e))
-    #     else:
-    #         pen_error = abs(e)
-    #
-    #     if self.oscillation_pen_fun:
-    #         pen_action = self.oscillation_pen_fun(abs(action_change)) * self.oscillation_pen_gain
-    #     else:
-    #         pen_action = abs(action_change) * self.oscillation_pen_gain
-    #
-    #     reward = 0
-    #     if abs_error < 0.5:
-    #         reward += 1
-    #     if abs_error < 0.1:
-    #         reward += 2
-    #     if abs_error < 0.05:
-    #         reward += 3
-    #     if abs_error < 0.02:
-    #         reward += 5
-    #     if abs_error < 0.005:
-    #         reward += 10
-    #
-    #     reward -= pen_error
-    #     reward -= pen_action
-    #
-    #     if self.log:
-    #         self.episode_log["rewards"]["summed"].append(reward)
-    #         self.episode_log["rewards"]["pen_action"].append(-pen_action)
-    #         self.episode_log["rewards"]["pen_error"].append(-pen_error)
-    #     return reward
+    def _create_reward_discrete(self):
+        # get latest system attributes and calculate error/ integrated error
+        y = np.array(list(self.last_system_outputs)[-self.sim.sensor_steps_per_controller_update:])
+        w = np.array(list(self.last_set_points)[-self.sim.sensor_steps_per_controller_update:])
+        e = np.mean(w - y)
+        u = np.array(list(self.last_system_inputs)[-2:])
+        u_change = abs(u[-1] - u[-2])
+
+        # calculate action change
+        # action_change = self.last_system_inputs[-(self.sim.sensor_steps_per_controller_update + 1)] \
+        #                 - self.last_system_inputs[-self.sim.sensor_steps_per_controller_update]
+
+        abs_error = abs(e)
+
+        if self.error_pen_fun:
+            pen_error = self.error_pen_fun(abs(e))
+        else:
+            pen_error = abs(e)
+
+        if self.oscillation_pen_fun:
+            pen_u_change = self.oscillation_pen_fun(abs(u_change)) * self.oscillation_pen_gain
+        else:
+            pen_u_change = abs(u_change) * self.oscillation_pen_gain
+
+        reward = 0
+        if abs_error < 0.5:
+            reward += 1
+        if abs_error < 0.1:
+            reward += 2
+        if abs_error < 0.05:
+            reward += 3
+        if abs_error < 0.02:
+            reward += 5
+        if abs_error < 0.005:
+            reward += 10
+
+        reward -= pen_error
+        reward -= pen_u_change
+
+        if self.log:
+            self.episode_log["rewards"]["summed"].append(reward)
+            self.episode_log["rewards"]["pen_action"].append(-pen_u_change)
+            self.episode_log["rewards"]["pen_error"].append(-pen_error)
+        return reward
 
     def step(self, action):
         """
@@ -367,8 +374,8 @@ class PIControllerPT2(gym.Env):
 
         # system is not defined if p and i is zero
         smallest_possible_pos_value = np.nextafter(0, 1)
-        controller_p = np.clip(action[0] + 1, smallest_possible_pos_value, 2)
-        controller_i = np.clip(action[1] + 1, smallest_possible_pos_value, 2)
+        controller_p = np.clip(action[0] + 1, 1e-3, 2)
+        controller_i = np.clip(action[1] + 1, 1e-3, 2)
 
         # create static input for every simulation step until next update of u.
         system_input_trajectory = [action[0]] * (self.sim.model_steps_per_controller_update + 1)
@@ -414,13 +421,12 @@ class PIControllerPT2(gym.Env):
     def create_io_sys(self, p, i):
         p = p * self.sim.action_scale
         i = i * self.sim.action_scale
+        self.p = p
+        self.i = i
 
         pi_controller = control.tf2ss(control.tf([p, i], [1, 0]))
         if self.first_step:
-            if i > 0:
-                self.sim.last_state[0, 0] = self.w[0, 0] / (i * self.open_loop_gain)
-            else:
-                self.sim.last_state[0, 0] = 0
+            self.sim.last_state[0, 0] = self.w[0, 0] / (i * self.open_loop_gain)
 
         io_open_loop = control.LinearIOSystem(self.open_loop_sys, inputs="u", outputs="y", name="open_loop")
         io_pi = control.LinearIOSystem(pi_controller, inputs="e", outputs="u", name="controller")
@@ -530,8 +536,8 @@ class PIControllerPT2(gym.Env):
                     obs, reward, done, info = self.step(action)
                     rewards.append(reward)
                     actions.append(action)
-                _, _, _, smoothness = self.eval_fft()
-                sms.append(smoothness)
+                # _, _, _, smoothness = self.eval_fft()
+                # sms.append(smoothness)
                 fig = self.create_eval_plot()
                 plt.savefig(f"eval\\{folder_name}\\{i}_{step}_{slope}.png")
                 plt.close()
@@ -541,7 +547,7 @@ class PIControllerPT2(gym.Env):
         mean_episode_reward = np.sum(rewards) / self.n_episodes
         extra_info["mean_episode_reward"] = mean_episode_reward
         extra_info["rmse"] = np.mean(rmse)
-        extra_info["smoothness"] = np.mean(sms)
+        # extra_info["smoothness"] = np.mean(sms)
 
         with open(f"eval\\{folder_name}\\extra_info.json", 'w+') as f:
             json.dump(extra_info, f)
