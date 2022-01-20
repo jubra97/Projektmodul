@@ -87,53 +87,64 @@ class DirectControllerOnline(gym.Env):
         return obs
 
     def step(self, action):
+        """
+        Update u of online system, get achieved reward and create next observation.
+        :param action: Between -1 and 1; is scaled according to online system.
+        :return:
+        """
+
+        # reset system if needed
         if self.online_sys_needs_reset:
             self.online_system.reset()
             self.online_sys_needs_reset = False
 
+        # count calls per episodes for debugging
         self.timesteps_last_episode += 1
 
+        # wait here to set u with a specific sample time
         if self.last_step_time:
-            while time.perf_counter() - self.last_step_time < 0.01:
-                ...
-                # time.sleep(0.00001)
-            # print(time.perf_counter() - self.last_step_time)
+            while time.perf_counter() - self.last_step_time < 0.01:  # sample time: 100Hz
+                ...  # busy waiting is necessary as non busy waiting is not precised enough
         self.last_step_time = time.perf_counter()
 
+        # scale action
         u = (action[0] + 1) * 250
         u = np.clip(u, 0, 500)
 
+        # do logging
+        if self.log:
+            if self.last_u is not None and u is not None:
+                self.episode_log["action"]["change"].append((u - (self.last_u+1) * 250))
+            else:
+                self.episode_log["action"]["change"].append(0)
+            if u is not None:
+                self.episode_log["action"]["value"].append(u)
+            else:
+                self.episode_log["action"]["value"].append(0)
 
-        if self.last_u is not None and u is not None:
-            self.episode_log["action"]["change"].append((u - (self.last_u+1) * 250))
-        else:
-            self.episode_log["action"]["change"].append(0)
-        if u is not None:
-            self.episode_log["action"]["value"].append(u)
-        else:
-            self.episode_log["action"]["value"].append(0)
-
-
+        # get newest data from online system; create obs and reward and set u
         self.update_input()
         obs = self.create_obs(action[0])
         reward = self.create_reward(action[0])
         self.last_u = action[0]
         self.online_system.set_u(u)
 
-        # when is epside done? Just time?
-        info = {}
-
-        if self.t is not None and self.t.size > 0 and self.t[-1] > 3:
+        if self.t is not None and self.t.size > 0 and self.t[-1] > 3:  # one episode is 3 seconds long
             done = True
-            self.episode_log["function"]["y"] = self.online_system.last_y
-            self.episode_log["function"]["w"] = self.online_system.last_w
-
+            if self.log:
+                self.episode_log["function"]["y"] = self.online_system.last_y
+                self.episode_log["function"]["w"] = self.online_system.last_w
         else:
             done = False
 
+        info = {}
         return obs, reward, done, info
 
     def update_input(self):
+        """
+        Update values for observation/reward with newest online values.
+        :return:
+        """
         with self.online_system.ads_buffer_mutex:
             self.t = np.array(copy.copy(self.online_system.last_t[-2:]))
             self.w = np.array(copy.copy(self.online_system.last_w[-2:])) / 3_000_000
@@ -141,27 +152,31 @@ class DirectControllerOnline(gym.Env):
             self.y = np.array(copy.copy(self.online_system.last_y[-2:])) / 3_000_000
 
     def create_reward(self, current_u):
+        """
+        Compute reward according to current u and system state.
+        :param current_u: U
+        :return:
+        """
+
+        # only possible if online data is available
         if self.y.size > 0:
             y = np.array(self.y)
             w = np.array(self.w)
-            e = np.mean(w - y)
+            e = np.mean(w - y)  # control error
         else:
             return 0
 
-        if self.last_u == None:
-            action_change = 0
+        # add a penalty for changing u to achieve a non oscillating u / system
+        if self.last_u is None or current_u is None:
             pen_action = 0
         else:
             action_change = abs(current_u - self.last_u)
             pen_action = np.sqrt(action_change) * 3
 
-        if self.u is None:
-            return 0
-
         abs_error = abs(e)
-        pen_error = np.abs(e)
+        pen_error = np.abs(e)  # add penalty for high error between y and w
 
-
+        # add a reward for achieving smaller errors. Results in better training.
         reward = 0
         if abs_error < 0.5:
             reward += 1
@@ -178,6 +193,7 @@ class DirectControllerOnline(gym.Env):
 
         reward -= pen_error
         reward -= pen_action
+
         if self.log:
             self.episode_log["rewards"]["summed"].append(reward)
             self.episode_log["rewards"]["pen_error"].append(-pen_error)
