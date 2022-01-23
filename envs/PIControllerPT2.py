@@ -14,7 +14,7 @@ from envs.IOSim import IOSim
 class PIControllerPT2(gym.Env):
 
     def __init__(self, oscillating=True, log=False, reward_function="discrete", observation_function="obs_with_vel",
-                 oscillation_pen_gain=1, oscillation_pen_fun=np.sqrt, error_pen_fun=None):
+                 oscillation_pen_gain=10, oscillation_pen_fun=np.sqrt, error_pen_fun=None):
         """
         Create a gym environment to directly control the actuating value (u) of a system.
         :param oscillating: If True a
@@ -30,7 +30,7 @@ class PIControllerPT2(gym.Env):
         self.open_loop_sys = control.tf2ss(self.open_loop_sys)
 
         # create simulation object with an arbitrary tf.
-        self.sim = IOSim(None, 10_000, 200, 100, action_scale=5, obs_scale=1, simulation_time=1.5)
+        self.sim = IOSim(None, 10_000, 200, 100, action_scale=10, obs_scale=1, simulation_time=1.5)
         self.open_loop_gain = (self.open_loop_sys.C @ np.linalg.inv(-self.open_loop_sys.A) @ self.open_loop_sys.B + self.open_loop_sys.D)[0][0]
 
         if reward_function == "discrete":
@@ -62,6 +62,7 @@ class PIControllerPT2(gym.Env):
         self.last_system_inputs = deque([0] * 3, maxlen=3)
         self.last_system_outputs = deque([0] * 3, maxlen=3)
         self.last_set_points = deque([0] * 3, maxlen=3)
+        self.last_system_errors = deque([0] * 3, maxlen=3)
         self.last_ps = deque([0] * 3, maxlen=3)
         self.last_is = deque([0] * 3, maxlen=3)
 
@@ -116,6 +117,7 @@ class PIControllerPT2(gym.Env):
         # reset stuff that is only valid in the same episode
         self.last_system_inputs = deque([0] * 3, maxlen=3)
         self.last_system_outputs = deque([0] * 3, maxlen=3)
+        self.last_system_errors = deque([0] * 3, maxlen=3)
         self.last_set_points = deque([0] * 3, maxlen=3)
         self.last_ps = deque([0] * 3, maxlen=3)
         self.last_is = deque([0] * 3, maxlen=3)
@@ -142,6 +144,8 @@ class PIControllerPT2(gym.Env):
             self.episode_log["obs"]["set_point_vel"] = []
             self.episode_log["obs"]["input_vel"] = []
             self.episode_log["obs"]["outputs_vel"] = []
+            self.episode_log["obs"]["system_error"] = []
+            self.episode_log["obs"]["error_vel"] = []
             self.episode_log["obs"]["i"] = []
             self.episode_log["obs"]["p"] = []
             self.episode_log["rewards"]["summed"] = []
@@ -160,6 +164,7 @@ class PIControllerPT2(gym.Env):
         self.last_system_inputs = deque([(self.w[0, 0] * self.sim.obs_scale)/(self.open_loop_gain * self.sim.action_scale)] * 3, maxlen=3)
         self.last_system_outputs = deque([(states[:, -1] @ self.open_loop_sys.C.T)[0] / self.sim.obs_scale] * 3, maxlen=3)
         self.last_set_points = deque([self.w[0, 0]] * 3, maxlen=3)
+        self.last_system_errors = deque([0] * 3, maxlen=3)
         obs = self.observation_function()
         return obs
 
@@ -197,21 +202,34 @@ class PIControllerPT2(gym.Env):
         """
         set_points = np.array(list(self.last_set_points))
         system_outputs = np.array(list(self.last_system_outputs))
+        system_errors = np.array(list(self.last_system_errors))
         p_s = np.array(list(self.last_ps))
         i_s = np.array(list(self.last_is))
 
         outputs_vel = (system_outputs[-2] - system_outputs[-1]) * 1 / self.sim.sensor_steps_per_controller_update
         set_point_vel = (set_points[-2] - set_points[-1]) * 1 / self.sim.sensor_steps_per_controller_update
+        error_vel = (system_errors[-2] - system_errors[-1]) * 1 / self.sim.sensor_steps_per_controller_update
 
-        obs = [p_s[-1], i_s[-1], set_points[-1], system_outputs[-1], set_point_vel, outputs_vel]
+        # obs = [p_s[-1], i_s[-1], set_points[-1], system_outputs[-1], system_errors[-1], set_point_vel, outputs_vel, error_vel]
+
+        obs = [p_s[-1], i_s[-1], system_errors[-1], error_vel]
+
+        # if self.log:
+        #     self.episode_log["obs"]["p"].append(obs[0])
+        #     self.episode_log["obs"]["i"].append(obs[1])
+        #     self.episode_log["obs"]["set_point"].append(obs[2])
+        #     self.episode_log["obs"]["system_output"].append(obs[3])
+        #     self.episode_log["obs"]["system_error"].append(obs[4])
+        #     self.episode_log["obs"]["set_point_vel"].append(obs[5])
+        #     self.episode_log["obs"]["outputs_vel"].append(obs[6])
+        #     self.episode_log["obs"]["error_vel"].append(obs[7])
 
         if self.log:
             self.episode_log["obs"]["p"].append(obs[0])
             self.episode_log["obs"]["i"].append(obs[1])
-            self.episode_log["obs"]["set_point"].append(obs[2])
-            self.episode_log["obs"]["system_output"].append(obs[3])
-            self.episode_log["obs"]["set_point_vel"].append(obs[4])
-            self.episode_log["obs"]["outputs_vel"].append(obs[5])
+            self.episode_log["obs"]["system_error"].append(obs[2])
+            self.episode_log["obs"]["error_vel"].append(obs[3])
+
 
         return np.array(obs)
 
@@ -304,7 +322,7 @@ class PIControllerPT2(gym.Env):
                         - self.last_system_inputs[-self.sim.sensor_steps_per_controller_update]
 
         pen_error = np.abs(e)
-        pen_action = np.sqrt(u_change) * 0.1
+        pen_action = np.sqrt(u_change) * 1
         # pen_integrated = np.square(self.integrated_error) * 0
 
         reward = 0
@@ -397,6 +415,7 @@ class PIControllerPT2(gym.Env):
         for step in range(self.sim.sensor_steps_per_controller_update, 0, -1):
             self.last_ps.append(controller_p)
             self.last_is.append(controller_i)
+            self.last_system_errors.append(self.sim.sensor_out[3, self.sim.current_sensor_step - step])  # e
             self.last_system_inputs.append(self.sim.sensor_out[2, self.sim.current_sensor_step - step])  # u
             self.last_system_outputs.append(self.sim.sensor_out[1, self.sim.current_sensor_step - step])  # y
             self.last_set_points.append(self.w[0, self.sim.current_simulation_step - (step - 1) * self.sim.model_steps_per_senor_update - 1])  # w
