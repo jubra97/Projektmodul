@@ -2,7 +2,7 @@ import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from stable_baselines3.common.callbacks import EventCallback, BaseCallback
 from stable_baselines3.common.logger import Figure
-import torch as th
+import numpy as np
 
 class CustomEvalCallback(BaseCallback):
     """
@@ -34,6 +34,7 @@ class CustomEvalCallback(BaseCallback):
     def __init__(
             self,
             eval_env,
+            best_model_save_path,
             n_eval_episodes: int = 1,
             eval_freq: int = 10000,
             deterministic: bool = True,
@@ -45,6 +46,8 @@ class CustomEvalCallback(BaseCallback):
         self.deterministic = deterministic
         self.evaluate = False
         self.eval_env = eval_env
+        self.best_model_save_path = best_model_save_path
+        self.best_reward = -np.inf
 
     # def _init_callback(self):
     #     print(type(self.model.actor))
@@ -82,19 +85,26 @@ class CustomEvalCallback(BaseCallback):
 
         return True
 
-
     def _on_rollout_end(self) -> None:
         if self.evaluate:
             self.evaluate = False
             ob = self.eval_env.reset()
             done = False
+            rewards = []
             while done is not True:
                 action, _states = self.model.predict(ob, deterministic=self.deterministic)
                 ob, reward, done, info = self.eval_env.step(action)
+                rewards.append(reward)
 
             print(f"Logging Image Call Nr: {self.n_calls}")
             fig = self.eval_env.create_eval_plot()
             self.logger.record("Overview/A", Figure(fig, close=True), exclude=("stdout", "log", "json", "csv"))
             plt.close()
+            mean_reward = np.mean(rewards)
+            if mean_reward > self.best_reward:
+                self.best_reward = mean_reward
+                self.model.save(self.best_model_save_path)
+                print("New best model!")
+
             # first_layer_weight = self.model.actor.mu._modules["0"].weight
             # self.logger.output_formats[1].writer.add_histogram("test", first_layer_weight, self.n_calls)

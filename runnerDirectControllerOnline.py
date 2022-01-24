@@ -45,7 +45,7 @@ for actor_net in [[20, 20]]:
 
             online_connection = DirectControllerOnlineConnection()
             # for action_noise in [0.3, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.003, 0.001, 0.0001, 0]:
-            RUN_NAME = f"direct_online_first_test"
+            RUN_NAME = f"abc"
 
 
             env = make_vec_env(DirectControllerOnline, env_kwargs={"online_sys": online_connection})
@@ -62,10 +62,10 @@ for actor_net in [[20, 20]]:
 
             # create action noise
             n_actions = env.action_space.shape[-1]
-            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.05) * np.ones(n_actions))
+            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.02) * np.ones(n_actions))
 
             # create eval callback
-            eval_callback = CustomEvalCallback(online_eval_env, eval_freq=1500, deterministic=True)
+            eval_callback = CustomEvalCallback(online_eval_env, best_model_save_path=f"eval\\{RUN_NAME}\\best_model", eval_freq=1500, deterministic=True)
 
             # create callback list
             callbacks = CallbackList([eval_callback])
@@ -75,16 +75,21 @@ for actor_net in [[20, 20]]:
             # policy_kwargs = dict(activation_fn=th.nn.Tanh)
             policy_kwargs = dict(net_arch=dict(pi=actor_net, qf=critic_net), activation_fn=af)
 
-            model = DDPG(MlpPolicy,
-                         env,
-                         learning_starts=1500,
-                         verbose=2,
-                         action_noise=action_noise,
-                         tensorboard_log="./pi_online_first_test/",
-                         policy_kwargs=policy_kwargs,
-                         )
-            model.learn(total_timesteps=100_000, tb_log_name=f"pi_online_first_test", callback=callbacks, log_interval=1)
-            # utils.eval(PIControllerOnline(log=True), model, folder_name=RUN_NAME)
-            # #
-            # # # save model if you want to
-            model.save(f"eval\\{RUN_NAME}\\model")
+            # model = DDPG(MlpPolicy,
+            #              env,
+            #              learning_starts=3000,
+            #              verbose=2,
+            #              action_noise=action_noise,
+            #              tensorboard_log="./abc/",
+            #              policy_kwargs=policy_kwargs,
+            #              )
+
+            model = DDPG.load(r"C:\Users\brandlju\PycharmProjects\Projektmodul\saved_models\end_model2.zip", env, force_reset=True,
+                              custom_objects={"learning_starts": 0,
+                                              "action_noise": action_noise})
+
+            model.learn(total_timesteps=100_000, tb_log_name=f"abc", callback=callbacks, log_interval=1)
+            # # utils.eval(PIControllerOnline(log=True), model, folder_name=RUN_NAME)
+            # # #
+            # # # # save model if you want to
+            model.save(f"eval\\{RUN_NAME}\\end_model")

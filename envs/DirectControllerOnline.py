@@ -129,7 +129,7 @@ class DirectControllerOnline(gym.Env):
         self.last_u = action[0]
         self.online_system.set_u(u)
 
-        if self.t is not None and self.t.size > 0 and self.t[-1] > 3:  # one episode is 3 seconds long
+        if self.t is not None and self.t.size > 0 and self.t[-1] > 5:  # one episode is 3 seconds long
             done = True
             if self.log:
                 self.episode_log["function"]["y"] = self.online_system.last_y
@@ -172,7 +172,7 @@ class DirectControllerOnline(gym.Env):
             pen_action = 0
         else:
             action_change = abs(current_u - self.last_u)
-            pen_action = np.sqrt(action_change) * 3
+            pen_action = np.sqrt(action_change) * 5
 
         abs_error = abs(e)
         pen_error = np.abs(e)  # add penalty for high error between y and w
@@ -209,7 +209,6 @@ class DirectControllerOnline(gym.Env):
         :return:
         """
         if self.w.size < 2:
-            print("Passiert wohl noch")
             return [0, 0, 0, 0, 0, 0]
 
         set_point = self.w[-1]

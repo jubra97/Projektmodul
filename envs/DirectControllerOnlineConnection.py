@@ -44,7 +44,7 @@ class DirectControllerOnlineConnection:
         self.last_runs = []
         self.reset_triggered = True
 
-        self.sample_freq = 5000
+        self.sample_freq = 4000
         self.n_updates = 0
 
         self.plc = pyads.Connection('192.168.10.200.1.1', 352)
