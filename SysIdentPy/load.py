@@ -6,9 +6,9 @@ from sysidentpy.neural_network import NARXNN
 import scipy.io
 from datatools import load_data
 
-u_train, u_valid, y_train, y_valid = load_data("newsensorlong.mat")
+u_train, u_valid, u2_train, u2_valid, y_train, y_valid = load_data("miso.mat")
 
-net = pickle.load(open("SysIdentPy/models/NARX_6_1_long_2.p", "rb" ))
+net = pickle.load(open("SysIdentPy/models/MISO_NARX_20_1.p", "rb" ))
 
 yhat = net.predict(u_train, y_train)
 ee, ex, extras, lam = net.residuals(u_train, y_train, yhat)

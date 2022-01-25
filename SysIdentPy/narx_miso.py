@@ -31,9 +31,10 @@ class NARX(nn.Module):
 
 def build_net(output_lags, input_lags):
     narx_net = NARXNN(
-        net=NARX(output_lags, input_lags),
+        net=NARX(output_lags, 2*input_lags),
         ylag=output_lags,
-        xlag=input_lags,
+        xlag=[input_lags, input_lags],
+        n_inputs= 2,
         loss_func='mse_loss',
         optimizer='Adam',
         epochs=100,
@@ -41,9 +42,9 @@ def build_net(output_lags, input_lags):
         learning_rate=0.0001,
         optim_params={'betas': (0.9, 0.999), 'eps': 1e-08} # optional parameters of the optimizer
     )
-    with open(f"SysIdentPy/models/NARX_{output_lags}_{input_lags}.p", "wb") as f:
+    with open(f"SysIdentPy/models/MISO_NARX_{output_lags}_{input_lags}.p", "wb") as f:
         pickle.dump(narx_net, f)
 
 
 if __name__ == "__main__":
-    build_net(20, 20)
+    build_net(20, 1)
