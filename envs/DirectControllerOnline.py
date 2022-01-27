@@ -92,11 +92,11 @@ class DirectControllerOnline(gym.Env):
         :param action: Between -1 and 1; is scaled according to online system.
         :return:
         """
-
         # reset system if needed
         if self.online_sys_needs_reset:
             self.online_system.reset()
             self.online_sys_needs_reset = False
+            print("OnlineSys reset called")
 
         # count calls per episodes for debugging
         self.timesteps_last_episode += 1
@@ -145,11 +145,15 @@ class DirectControllerOnline(gym.Env):
         Update values for observation/reward with newest online values.
         :return:
         """
-        with self.online_system.ads_buffer_mutex:
-            self.t = np.array(copy.copy(self.online_system.last_t[-2:]))
-            self.w = np.array(copy.copy(self.online_system.last_w[-2:])) / 3_000_000
-            self.u = np.array(copy.copy(self.online_system.last_u[-2:]))
-            self.y = np.array(copy.copy(self.online_system.last_y[-2:])) / 3_000_000
+        retry = True
+        while retry:
+            with self.online_system.ads_buffer_mutex:
+                self.t = np.array(copy.copy(self.online_system.last_t[-2:]))
+                self.w = np.array(copy.copy(self.online_system.last_w[-2:])) / 3_000_000
+                self.u = np.array(copy.copy(self.online_system.last_u[-2:]))
+                self.y = np.array(copy.copy(self.online_system.last_y[-2:])) / 3_000_000
+            if self.t.size >= 2 or self.n_episodes == 1:
+                retry = False
 
     def create_reward(self, current_u):
         """
@@ -209,6 +213,8 @@ class DirectControllerOnline(gym.Env):
         :return:
         """
         if self.w.size < 2:
+            print("Obs wrong")
+            print(self.w)
             return [0, 0, 0, 0, 0, 0]
 
         set_point = self.w[-1]
