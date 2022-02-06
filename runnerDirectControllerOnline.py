@@ -45,7 +45,7 @@ for actor_net in [[20, 20]]:
 
             online_connection = DirectControllerOnlineConnection()
             # for action_noise in [0.3, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.003, 0.001, 0.0001, 0]:
-            RUN_NAME = f"abc"
+            RUN_NAME = f"direct_with_error"
 
 
             env = make_vec_env(DirectControllerOnline, env_kwargs={"online_sys": online_connection})
@@ -80,15 +80,15 @@ for actor_net in [[20, 20]]:
             #              learning_starts=3000,
             #              verbose=2,
             #              action_noise=action_noise,
-            #              tensorboard_log="./abc/",
+            #              tensorboard_log="./direct_with_error/",
             #              policy_kwargs=policy_kwargs,
             #              )
 
-            model = DDPG.load(r"C:\Users\brandlju\PycharmProjects\Projektmodul\saved_models\end_model2.zip", env, force_reset=True,
+            model = DDPG.load(r"C:\Users\brandlju\PycharmProjects\Projektmodul\eval\direct_with_error\best_model.zip", env, force_reset=True,
                               custom_objects={"learning_starts": 0,
                                               "action_noise": action_noise})
 
-            model.learn(total_timesteps=100_000, tb_log_name=f"abc", callback=callbacks, log_interval=1)
+            model.learn(total_timesteps=200_000, tb_log_name=f"RUN", callback=callbacks, log_interval=1)
             # # utils.eval(PIControllerOnline(log=True), model, folder_name=RUN_NAME)
             # # #
             # # # # save model if you want to
