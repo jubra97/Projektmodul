@@ -13,8 +13,8 @@ from envs.TfSim import TfSim
 
 class DirectControllerPT2(gym.Env):
 
-    def __init__(self, oscillating=True, log=False, reward_function="discrete", observation_function="obs_with_vel",
-                 oscillation_pen_gain=0.1,
+    def __init__(self, oscillating=True, log=False, reward_function="discrete", observation_function="error_with_vel",
+                 oscillation_pen_gain=5,
                  oscillation_pen_fun=np.sqrt, error_pen_fun=None):
         """
         Create a gym environment to directly control the actuating value (u) of a system.
@@ -65,6 +65,7 @@ class DirectControllerPT2(gym.Env):
         self.last_set_points = deque([0] * 60, maxlen=60)
 
         self.w = []
+        self.integrated_error = 0
 
         # create variables for logging
         self.episode_log = {"obs": {}, "rewards": {}, "action": {}, "function": {}}
@@ -135,6 +136,7 @@ class DirectControllerPT2(gym.Env):
             self.episode_log["obs"]["set_point_vel"] = []
             self.episode_log["obs"]["input_vel"] = []
             self.episode_log["obs"]["outputs_vel"] = []
+            self.episode_log["obs"]["error_integrated"] = []
             self.episode_log["rewards"]["summed"] = []
             self.episode_log["rewards"]["pen_error"] = []
             self.episode_log["rewards"]["pen_action"] = []
@@ -144,8 +146,9 @@ class DirectControllerPT2(gym.Env):
             self.episode_log["function"]["y"] = None
 
         # create start observation of new episode
+        self.integrated_error = 0
         self.last_system_inputs = deque(
-            [(self.w[0] * self.sim.obs_scale) / (self.sys_gain * self.sim.action_scale)] * 60, maxlen=60)
+            [((self.w[0] * self.sim.obs_scale) / (self.sys_gain * self.sim.action_scale))] * 60, maxlen=60)
         self.last_system_outputs = deque([(self.sim.last_state[:, -1] @ self.sim.sys.C.T)[0] / self.sim.obs_scale] * 60,
                                          maxlen=60)
         self.last_set_points = deque([self.w[0]] * 60, maxlen=60)
@@ -224,17 +227,28 @@ class DirectControllerPT2(gym.Env):
         system_inputs = np.array(list(self.last_system_inputs))
         errors = (set_points - system_outputs).tolist()
 
-        error_vel = (errors[-2] - errors[-1]) * 1 / self.sim.sensor_steps_per_controller_update
+        error_smooth = [0, 0]
+        error_smooth[-1] = np.mean(errors[-10:])
+        error_smooth[-2] = np.mean(errors[-20:-10])
+
+        self.integrated_error += error_smooth[-1] * 1 / self.sim.sensor_steps_per_controller_update
+
+        error_vel = (error_smooth[-2] - error_smooth[-1]) * 1 / self.sim.sensor_steps_per_controller_update
         input_vel = (system_inputs[-3] - system_inputs[-1]) * 1 / self.sim.model_steps_per_controller_update
 
-        obs = [errors[0], system_inputs[-1], error_vel, input_vel]
+        # old_obs = self._create_obs_with_vel()
+
+        obs = [error_smooth[-1], error_vel, system_outputs[-1]]
+        # obs = old_obs.tolist() + [error_smooth[-1], system_inputs[-1], error_vel, input_vel]
+        # obs = [error_smooth[-1], error_vel]
 
         if self.log:
             self.episode_log["obs"]["error"].append(obs[0])
-            self.episode_log["obs"]["system_input"].append(obs[1])
-            self.episode_log["obs"]["error_vel"].append(obs[2])
-            self.episode_log["obs"]["input_vel"].append(obs[3])
-
+            # self.episode_log["obs"]["system_input"].append(obs[4])
+            self.episode_log["obs"]["error_vel"].append(obs[1])
+            # self.episode_log["obs"]["input_vel"].append(obs[5])
+            # self.episode_log["obs"]["error_integrated"].append(obs[2])
+            self.episode_log["obs"]["system_output"].append(obs[2])
         return np.array(obs)
 
     def _create_obs_last_errors(self):
@@ -339,7 +353,7 @@ class DirectControllerPT2(gym.Env):
         :param action: Next u for simulation.
         :return:
         """
-
+        # action[0] = action[0] ** 2
         # create static input for every simulation step until next update of u.
         system_input_trajectory = [action[0]] * (self.sim.model_steps_per_controller_update + 1)
 
