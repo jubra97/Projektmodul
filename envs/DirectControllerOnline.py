@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 
 class DirectControllerOnline(gym.Env):
-    def __init__(self, online_sys=None, sample_freq=4000, log=True):
+    def __init__(self, online_sys=None, input_freq=100, sensor_sample_freq=4000, log=True):
         """
         Create a gym environment to directly control the actuating value (u) the given online system.
         :param online_sys: Connection to the online system.
@@ -22,7 +22,9 @@ class DirectControllerOnline(gym.Env):
         self.log_all = []
         self.n_episodes = 0
         self.timesteps_last_episode = 0
-        self.sample_freq = sample_freq
+        self.sensor_sample_freq = sensor_sample_freq
+        self.input_freq = input_freq
+        self.sample_freq = 400
         self.log = log
         self.online_sys_needs_reset = True
 
@@ -30,13 +32,15 @@ class DirectControllerOnline(gym.Env):
         self.w = np.array([])
         self.u = np.array([])
         self.y = np.array([])
+        self.t2 = np.array([])
         self.last_u = None
+        self.integrated_error = 0
 
         self.last_step_time = None
         self.last_reset_time = None
 
-        self.observation_space = gym.spaces.Box(low=np.array([-100]*4), high=np.array([100]*4),
-                                                shape=(4,),
+        self.observation_space = gym.spaces.Box(low=np.array([-100]*5), high=np.array([100]*5),
+                                                shape=(5,),
                                                 dtype=np.float32)
         self.action_space = gym.spaces.Box(low=np.array([-1]*1), high=np.array([1]*1), shape=(1,),
                                            dtype=np.float32)
@@ -64,6 +68,7 @@ class DirectControllerOnline(gym.Env):
 
         self.last_step_time = None
         self.last_u = None
+        self.integrated_error = 0
 
         self.episode_log["obs"]["set_point"] = []
         self.episode_log["obs"]["set_point_vel"] = []
@@ -73,6 +78,7 @@ class DirectControllerOnline(gym.Env):
         self.episode_log["obs"]["input_vel"] = []
         self.episode_log["obs"]["error"] = []
         self.episode_log["obs"]["error_vel"] = []
+        self.episode_log["obs"]["error_int"] = []
         self.episode_log["rewards"]["summed"] = []
         self.episode_log["rewards"]["pen_error"] = []
         self.episode_log["rewards"]["pen_u_change"] = []
@@ -111,12 +117,12 @@ class DirectControllerOnline(gym.Env):
 
         # scale action
         u = (action[0] + 1) * 300
-        u = np.clip(u, 0, 500)
+        u = np.clip(u, 0, 600)
 
         # do logging
         if self.log:
             if self.last_u is not None and u is not None:
-                self.episode_log["action"]["change"].append((u - (self.last_u+1) * 250))
+                self.episode_log["action"]["change"].append((u - (self.last_u+1) * 300))
             else:
                 self.episode_log["action"]["change"].append(0)
             if u is not None:
@@ -130,7 +136,6 @@ class DirectControllerOnline(gym.Env):
         reward = self.create_reward(action[0])
         self.last_u = action[0]
         self.online_system.set_u(u)
-
         if self.t is not None and self.t.size > 0 and self.t[-1] > 5:  # one episode is 3 seconds long
             done = True
             if self.log:
@@ -150,12 +155,24 @@ class DirectControllerOnline(gym.Env):
         retry = True
         while retry:
             with self.online_system.ads_buffer_mutex:
-                self.t = np.array(copy.copy(self.online_system.last_t[-2:]))
-                self.w = np.array(copy.copy(self.online_system.last_w[-2:])) / 3_000_000
-                self.u = np.array(copy.copy(self.online_system.last_u[-2:]))
-                self.y = np.array(copy.copy(self.online_system.last_y[-2:])) / 3_000_000
-            if self.t.size >= 2 or self.n_episodes == 1:
-                retry = False
+                if len(self.online_system.last_t) >= 20:
+                    self.t = np.mean(np.reshape(self.online_system.last_t[-20:], (2, 10)), axis=1)
+                    self.w = np.mean(np.reshape(self.online_system.last_w[-20:], (2, 10)), axis=1) / 3_000_000
+                    self.u = np.mean(np.reshape(self.online_system.last_u[-20:], (2, 10)), axis=1)
+                    self.y = np.mean(np.reshape(self.online_system.last_y[-20:], (2, 10)), axis=1) / 3_000_000
+                if len(self.online_system.last_t) >= 20 or self.n_episodes == 1:
+                    retry = False
+
+
+            #     self.t = np.array(copy.copy(self.online_system.last_t[-2:]))
+            #     print("___")
+            #     print(self.t2)
+            #     print(self.t)
+            #     # self.w = np.array(copy.copy(self.online_system.last_w[-2:])) / 3_000_000
+            #     # self.u = np.array(copy.copy(self.online_system.last_u[-2:]))
+            #     # self.y = np.array(copy.copy(self.online_system.last_y[-2:])) / 3_000_000
+            # if self.t.size >= 2 or self.n_episodes == 1:
+            #     retry = False
 
     def create_reward(self, current_u):
         """
@@ -217,15 +234,16 @@ class DirectControllerOnline(gym.Env):
         if self.w.size < 2:
             print("Obs wrong")
             print(self.w)
-            return [0, 0, 0, 0]
+            return [0, 0, 0, 0, 0]
 
         set_point = self.w[-1]
         set_point_vel = (self.w[-1] - self.w[-2]) * 1 / self.sample_freq
         system_output = self.y[-1]
         system_output_vel = (self.y[-1] - self.y[-2]) * 1 / self.sample_freq
-        system_input = (self.u[-1] / 250) - 1
+        system_input = (self.u[-1] / 300) - 1
         error = self.w[-1] - self.y[-1]
         error_vel = ((self.w[-1] - self.y[-1]) - (self.w[-2] - self.y[-2])) * 1 / self.sample_freq
+        self.integrated_error += error * 1 / self.sample_freq
 
         if self.last_u is None or current_u is None:
             input_vel = 0
@@ -243,13 +261,13 @@ class DirectControllerOnline(gym.Env):
         # obs[2] = 0
         # obs[-1] = 0
 
-        self.episode_log["obs"]["error"].append(error)
-        self.episode_log["obs"]["error_vel"].append(error_vel)
-        self.episode_log["obs"]["system_input"].append(system_input)
-        self.episode_log["obs"]["input_vel"].append(input_vel)
+        obs = [error, error_vel*100, self.integrated_error, system_input, system_output]
 
-        obs = [error, system_input, error_vel, input_vel]
-
+        self.episode_log["obs"]["error"].append(obs[0])
+        self.episode_log["obs"]["error_vel"].append(obs[1])
+        self.episode_log["obs"]["error_int"].append(obs[2])
+        self.episode_log["obs"]["system_input"].append(obs[3])
+        self.episode_log["obs"]["system_output"].append(obs[4])
 
         return np.array(obs)
 

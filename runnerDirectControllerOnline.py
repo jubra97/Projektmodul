@@ -62,7 +62,7 @@ for actor_net in [[20, 20]]:
 
             # create action noise
             n_actions = env.action_space.shape[-1]
-            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.02) * np.ones(n_actions))
+            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.05) * np.ones(n_actions))
 
             # create eval callback
             eval_callback = CustomEvalCallback(online_eval_env, best_model_save_path=f"eval\\{RUN_NAME}\\best_model", eval_freq=1500, deterministic=True)
