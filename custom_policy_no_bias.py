@@ -97,9 +97,9 @@ class CustomTD3Policy(TD3Policy):
         actor_kwargs = self._update_features_extractor(self.actor_kwargs, features_extractor)
         return CustomActor(**actor_kwargs).to(self.device)
 
-    def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> CustomContinuousCritic:
-        critic_kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
-        return CustomContinuousCritic(**critic_kwargs).to(self.device)
+    # def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> CustomContinuousCritic:
+    #     critic_kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
+    #     return CustomContinuousCritic(**critic_kwargs).to(self.device)
 
 
 register_policy("CustomTD3Policy", CustomTD3Policy)
