@@ -15,7 +15,6 @@ class DirectControllerOnline(DirectController):
         :param sample_freq:
         :param log: Log data?
         """
-        super(DirectControllerOnline).__init__(log)
 
         self.online_system = online_sys
 
@@ -25,6 +24,7 @@ class DirectControllerOnline(DirectController):
         self.last_step_time = None
         self.last_reset_time = None
 
+        super().__init__(log=log)
 
     def custom_reset(self):
         """
@@ -48,8 +48,6 @@ class DirectControllerOnline(DirectController):
 
         # get first data from online system and create observation with it
         self.update_input()
-        obs = self.observation_function()
-        return obs
 
     def step(self, action):
         """
@@ -72,14 +70,11 @@ class DirectControllerOnline(DirectController):
                 ...  # busy waiting is necessary as non busy waiting is not precised enough
         self.last_step_time = time.perf_counter()
 
-        # scale action
-        u = (action[0] + 1) * 300
-        u = np.clip(u, 0, 500)
-
+        u = action[0]
         # do logging
         if self.log:
             if self.last_u is not None and u is not None:
-                self.episode_log["action"]["change"].append((u - (self.last_u+1) * 250))
+                self.episode_log["action"]["change"].append(u - self.last_u[-1])
             else:
                 self.episode_log["action"]["change"].append(0)
             if u is not None:
@@ -112,6 +107,8 @@ class DirectControllerOnline(DirectController):
         retry = True
         while retry:
             with self.online_system.ads_buffer_mutex:
+                if self.last_t[-1] != 0 or self.n_episodes == 1 or self.timesteps_last_episode == 0:
+                    retry = False
                 try:
                     self.last_t.extend(self.online_system.last_t[-self.measurements_per_output_update:])
                     self.last_w.extend(self.online_system.last_w[-self.measurements_per_output_update:])
@@ -119,8 +116,7 @@ class DirectControllerOnline(DirectController):
                     self.last_y.extend(self.online_system.last_y[-self.measurements_per_output_update:])
                 except IndexError:
                     ...
-            if self.last_t[-1] != 0 or self.n_episodes == 1:
-                retry = False
+
 
     # def create_reward(self, current_u):
     #     """
@@ -221,36 +217,36 @@ class DirectControllerOnline(DirectController):
     # def render(self, mode="human"):
     #     pass
     #
-    # def create_eval_plot(self):
-    #     fig, ax = plt.subplots(2, 2, figsize=(20, 12))
-    #
-    #     ax[0][0].set_title("Obs")
-    #     for key, value in self.episode_log["obs"].items():
-    #         if value:
-    #             ax[0][0].plot(value[:-1], label=key)  # verschoben zum Reset; eine Obs mehr als Reward!
-    #     ax[0][0].grid()
-    #     ax[0][0].legend()
-    #
-    #     ax[1][0].set_title("Rewards")
-    #     for key, value in self.episode_log["rewards"].items():
-    #         if value:
-    #             ax[1][0].plot(value, label=key)
-    #     ax[1][0].grid()
-    #     ax[1][0].legend()
-    #
-    #     ax[0][1].set_title("Action")
-    #     for key, value in self.episode_log["action"].items():
-    #         if value:
-    #             ax[0][1].plot(value, label=key)
-    #     ax[0][1].grid()
-    #     ax[0][1].legend()
-    #
-    #     ax[1][1].set_title("Function")
-    #     for key, value in self.episode_log["function"].items():
-    #         if value:
-    #             ax[1][1].plot(value, label=key)
-    #     ax[1][1].grid()
-    #     ax[1][1].legend()
-    #
-    #     fig.tight_layout()
-    #     return fig
+    def create_eval_plot(self):
+        fig, ax = plt.subplots(2, 2, figsize=(20, 12))
+
+        ax[0][0].set_title("Obs")
+        for key, value in self.episode_log["obs"].items():
+            if value:
+                ax[0][0].plot(value[:-1], label=key)  # verschoben zum Reset; eine Obs mehr als Reward!
+        ax[0][0].grid()
+        ax[0][0].legend()
+
+        ax[1][0].set_title("Rewards")
+        for key, value in self.episode_log["rewards"].items():
+            if value:
+                ax[1][0].plot(value, label=key)
+        ax[1][0].grid()
+        ax[1][0].legend()
+
+        ax[0][1].set_title("Action")
+        for key, value in self.episode_log["action"].items():
+            if value:
+                ax[0][1].plot(value, label=key)
+        ax[0][1].grid()
+        ax[0][1].legend()
+
+        ax[1][1].set_title("Function")
+        for key, value in self.episode_log["function"].items():
+            if value:
+                ax[1][1].plot(value, label=key)
+        ax[1][1].grid()
+        ax[1][1].legend()
+
+        fig.tight_layout()
+        return fig
