@@ -1,7 +1,7 @@
 import numpy as np
 import torch as th
 import os
-from stable_baselines3 import DDPG
+from stable_baselines3 import DDPG, TD3
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.monitor import Monitor
@@ -11,6 +11,7 @@ from stable_baselines3.ddpg.policies import MlpPolicy
 
 from CustomEvalCallback import CustomEvalCallback
 from envs.DirectControllerSim import DirectControllerSim
+import custom_policy_no_bias
 
 actor_net = [5, 5]
 critic_net = [200, 200]
@@ -29,7 +30,7 @@ if __name__ == "__main__":
 
     RUN_NAME = f"RUN\\{run_nbr}"
 
-    env = make_vec_env(DirectControllerSim, 3, vec_env_cls=SubprocVecEnv)  # create learning env
+    env = make_vec_env(DirectControllerSim, 6, vec_env_cls=SubprocVecEnv)  # create learning env
     # env = DirectControllerSim()
     #
     # create action noise
@@ -48,7 +49,7 @@ if __name__ == "__main__":
     # # start tensorboard server with tensorboard --logdir ./{tensorboard_log}/
     policy_kwargs = dict(net_arch=dict(pi=actor_net, qf=critic_net), activation_fn=af)
 
-    model = DDPG(MlpPolicy,
+    model = DDPG("CustomTD3Policy",
                  env,
                  learning_starts=3000,
                  verbose=2,
