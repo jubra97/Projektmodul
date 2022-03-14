@@ -88,7 +88,7 @@ class DirectControllerOnline(DirectController):
         reward = self.reward_function()
         self.online_system.set_u(u)
 
-        if self.last_t[-1] > 5:  # one episode is 3 seconds long
+        if self.last_t[-1] > 5 and self.timesteps_last_episode > 1:  # one episode is 3 seconds long
             done = True
             if self.log:
                 self.episode_log["function"]["y"] = self.online_system.last_y
