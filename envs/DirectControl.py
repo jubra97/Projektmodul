@@ -143,9 +143,9 @@ class DirectController(gym.Env, abc.ABC):
         system_outputs = np.array(list(self.last_y))
         system_inputs = np.array(list(self.last_u))
 
-        outputs_vel = (system_outputs[-2] - system_outputs[-1]) * 1 / self.sim.sensor_steps_per_controller_update
-        input_vel = (system_inputs[-3] - system_inputs[-1]) * 1 / self.sim.model_steps_per_controller_update
-        set_point_vel = (set_points[-2] - set_points[-1]) * 1 / self.sim.sensor_steps_per_controller_update
+        outputs_vel = (system_outputs[-2] - system_outputs[-1]) * 1 / self.measurements_per_output_update
+        input_vel = (system_inputs[-3] - system_inputs[-1]) * 1 / self.measurements_per_output_update
+        set_point_vel = (set_points[-2] - set_points[-1]) * 1 / self.measurements_per_output_update
 
         obs = [set_points[-1], system_inputs[-1], system_outputs[-1], set_point_vel, input_vel, outputs_vel]
 
@@ -190,10 +190,10 @@ class DirectController(gym.Env, abc.ABC):
         error_smooth[-1] = np.mean(errors[-10:])
         error_smooth[-2] = np.mean(errors[-20:-10])
 
-        self.integrated_error += error_smooth[-1] * 1 / self.sim.sensor_steps_per_controller_update
+        self.integrated_error += error_smooth[-1] * 1 / self.measurements_per_output_update
 
-        error_vel = (error_smooth[-2] - error_smooth[-1]) * 1 / self.sim.sensor_steps_per_controller_update
-        input_vel = (system_inputs[-3] - system_inputs[-1]) * 1 / self.sim.model_steps_per_controller_update
+        error_vel = (error_smooth[-2] - error_smooth[-1]) * 1 /self.measurements_per_output_update
+        input_vel = (system_inputs[-3] - system_inputs[-1]) * 1 / self.measurements_per_output_update
 
         # old_obs = self._create_obs_with_vel()
 
@@ -235,14 +235,14 @@ class DirectController(gym.Env, abc.ABC):
         :return: reward
         """
         # get latest system attributes and calculate error/ integrated error
-        y = np.array(list(self.last_y)[-self.sim.sensor_steps_per_controller_update:])
-        w = np.array(list(self.last_w)[-self.sim.sensor_steps_per_controller_update:])
+        y = np.array(list(self.last_y)[-self.measurements_per_output_update:])
+        w = np.array(list(self.last_w)[-self.measurements_per_output_update:])
         e = np.mean(w - y)
 
         # calculate action change
-        action_change = (self.last_u[-(self.sim.sensor_steps_per_controller_update + 1)]
-                         - self.last_u[-self.sim.sensor_steps_per_controller_update]) \
-                         * (1 / self.sim.sensor_steps_per_controller_update)
+        action_change = (self.last_u[-(self.measurements_per_output_update + 1)]
+                         - self.last_u[-self.measurements_per_output_update]) \
+                         * (1 / self.measurements_per_output_update)
 
         pen_error = np.square(e)
         pen_action = np.square(action_change) * 0.01
@@ -261,14 +261,14 @@ class DirectController(gym.Env, abc.ABC):
 
     def _create_reward_discrete(self):
         # get latest system attributes and calculate error/ integrated error
-        y = np.array(list(self.last_y)[-self.sim.sensor_steps_per_controller_update:])
-        w = np.array(list(self.last_w)[-self.sim.sensor_steps_per_controller_update:])
+        y = np.array(list(self.last_y)[-self.measurements_per_output_update:])
+        w = np.array(list(self.last_w)[-self.measurements_per_output_update:])
         e = np.mean(w - y)
 
         # calculate action change
-        action_change = (self.last_u[-(self.sim.sensor_steps_per_controller_update + 1)]
-                         - self.last_u[-self.sim.sensor_steps_per_controller_update]) \
-                         * (1 / self.sim.sensor_steps_per_controller_update)
+        action_change = (self.last_u[-(self.measurements_per_output_update + 1)]
+                         - self.last_u[-self.measurements_per_output_update]) \
+                         * (1 / self.measurements_per_output_update)
 
         abs_error = abs(e)
 
@@ -347,7 +347,7 @@ class DirectController(gym.Env, abc.ABC):
         :return:
         """
         fig, ax = plt.subplots(2, 3, figsize=(20, 12))
-        timestamps = np.linspace(0, self.sim.simulation_time, int(self.sim.simulation_time * self.sim.controller_freq))
+        timestamps = np.linspace(0, self.last_t[-1], int(self.last_t[-1] * self.output_freq))
 
         ax[0][0].set_title("Obs")
         for key, value in self.episode_log["obs"].items():
