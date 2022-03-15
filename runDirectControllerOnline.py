@@ -5,7 +5,9 @@ from envs.DirectControllerOnline import DirectControllerOnline
 online_connection = DirectControllerOnlineConnection()
 env = DirectControllerOnline(online_connection)
 
-model = DDPG.load(r"C:\Users\brandlju\PycharmProjects\Projektmodul\eval\abc\end_model.zip", env)
+
+
+model = DDPG.load(r"C:\Users\brandlju\PycharmProjects\Projektmodul\eval\direct_with_error\end_model.zip", env)
 
 
 while True:

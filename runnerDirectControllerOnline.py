@@ -11,7 +11,7 @@ from stable_baselines3.common.env_util import make_vec_env
 import torch as th
 from envs.DirectControllerOnlineConnection import DirectControllerOnlineConnection
 from envs.DirectControllerOnline import DirectControllerOnline
-
+import custom_policy_no_bias
 
 def linear_schedule(initial_value: float=1e-3) -> Callable[[float], float]:
     """
@@ -62,7 +62,7 @@ for actor_net in [[20, 20]]:
 
             # create action noise
             n_actions = env.action_space.shape[-1]
-            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.1) * np.ones(n_actions))
+            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.005) * np.ones(n_actions))
 
             # create eval callback
             eval_callback = CustomEvalCallback(online_eval_env, best_model_save_path=f"eval\\{RUN_NAME}\\best_model", eval_freq=1500, deterministic=True)
@@ -75,20 +75,20 @@ for actor_net in [[20, 20]]:
             # policy_kwargs = dict(activation_fn=th.nn.Tanh)
             policy_kwargs = dict(net_arch=dict(pi=actor_net, qf=critic_net), activation_fn=af)
 
-            model = DDPG(MlpPolicy,
-                         env,
-                         learning_starts=3000,
-                         verbose=2,
-                         action_noise=action_noise,
-                         tensorboard_log="./direct_with_error/",
-                         policy_kwargs=policy_kwargs,
-                         )
+            # model = DDPG("CustomTD3Policy",
+            #              env,
+            #              learning_starts=3000,
+            #              verbose=2,
+            #              action_noise=action_noise,
+            #              tensorboard_log="./direct_with_error/",
+            #              policy_kwargs=policy_kwargs,
+            #              )
 
-            # model = DDPG.load(r"C:\Users\brandlju\PycharmProjects\Projektmodul\eval\direct_with_error\best_model.zip", env, force_reset=True,
-            #                   custom_objects={"learning_starts": 0,
-            #                                   "action_noise": action_noise})
+            model = DDPG.load(r"C:\Users\brandlju\PycharmProjects\Projektmodul\eval\direct_with_error\end_model.zip", env, force_reset=True,
+                              custom_objects={"learning_starts": 0,
+                                              "action_noise": action_noise})
 
-            model.learn(total_timesteps=200_000, tb_log_name=f"RUN", callback=callbacks, log_interval=1)
+            model.learn(total_timesteps=50_000, tb_log_name=f"RUN", callback=callbacks, log_interval=1)
             # # utils.eval(PIControllerOnline(log=True), model, folder_name=RUN_NAME)
             # # #
             # # # # save model if you want to

@@ -70,7 +70,8 @@ class DirectControllerOnline(DirectController):
                 ...  # busy waiting is necessary as non busy waiting is not precised enough
         self.last_step_time = time.perf_counter()
 
-        u = action[0]
+        u = self.last_u[-1] + (action[0] / 4)
+        u = np.clip(u, -1, 1)
         # do logging
         if self.log:
             if self.last_u is not None and u is not None:
