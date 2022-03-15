@@ -232,6 +232,7 @@ class DirectControllerOnline(DirectController):
         for key, value in self.episode_log["rewards"].items():
             if value:
                 ax[1][0].plot(value, label=key)
+        ax[1][0].plot([0], [0], label=f"Sum: {np.sum(self.episode_log['rewards']['summed']):.2f}")
         ax[1][0].grid()
         ax[1][0].legend()
 
