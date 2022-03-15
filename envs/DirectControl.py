@@ -12,7 +12,7 @@ from scipy.fft import fft, fftfreq
 class DirectController(gym.Env, abc.ABC):
 
     def __init__(self, log=False, output_freq=100, sensor_freq=4000, reward_function="discrete", observation_function="error_with_vel",
-                 oscillation_pen_gain=5,
+                 oscillation_pen_gain=0.01,
                  oscillation_pen_fun=np.sqrt, error_pen_fun=None):
         """
         Create a gym environment to directly control the actuating value (u) of a system.
@@ -193,11 +193,11 @@ class DirectController(gym.Env, abc.ABC):
         self.integrated_error += error_smooth[-1] * 1 / self.measurements_per_output_update
 
         error_vel = (error_smooth[-2] - error_smooth[-1]) * 1 /self.measurements_per_output_update
-        input_vel = (system_inputs[-3] - system_inputs[-1]) * 1 / self.measurements_per_output_update
+        input_vel = (system_inputs[-41] - system_inputs[-1]) * 1 / self.measurements_per_output_update
 
         # old_obs = self._create_obs_with_vel()
 
-        obs = [error_smooth[-1],  error_vel, self.integrated_error]
+        obs = [error_smooth[-1],  error_vel * 10, self.integrated_error, input_vel*10]
         # obs = old_obs.tolist() + [error_smooth[-1], system_inputs[-1], error_vel, input_vel]
         # obs = [error_smooth[-1], error_vel]
 
@@ -205,7 +205,7 @@ class DirectController(gym.Env, abc.ABC):
             self.episode_log["obs"]["error"].append(obs[0])
             # self.episode_log["obs"]["system_input"].append(obs[3])
             self.episode_log["obs"]["error_vel"].append(obs[1])
-            # self.episode_log["obs"]["input_vel"].append(obs[5])
+            self.episode_log["obs"]["input_vel"].append(obs[3])
             self.episode_log["obs"]["error_integrated"].append(obs[2])
             # self.episode_log["obs"]["system_output"].append(obs[4])
         return np.array(obs)
@@ -278,7 +278,7 @@ class DirectController(gym.Env, abc.ABC):
             pen_error = abs(e)
 
         if self.oscillation_pen_fun:
-            pen_action = self.oscillation_pen_fun(abs(action_change)) * self.oscillation_pen_gain
+            pen_action = self.oscillation_pen_fun(abs((1/pen_error) * action_change)) * self.oscillation_pen_gain
         else:
             pen_action = abs(action_change) * self.oscillation_pen_gain
 
@@ -294,6 +294,8 @@ class DirectController(gym.Env, abc.ABC):
         if abs_error < 0.01:
             reward += 5
         if abs_error < 0.005:
+            reward += 10
+        if abs_error < 0.0005:
             reward += 10
 
         reward -= pen_error
@@ -360,6 +362,7 @@ class DirectController(gym.Env, abc.ABC):
         for key, value in self.episode_log["rewards"].items():
             if len(value) > 0:
                 ax[1][0].plot(timestamps, value, label=key)
+        ax[1][0].plot([0], [0], label=f"Sum: {np.sum(self.episode_log['rewards']['summed']):.2f}")
         ax[1][0].grid()
         ax[1][0].legend()
 
