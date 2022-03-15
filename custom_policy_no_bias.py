@@ -60,12 +60,12 @@ class CustomContinuousCritic(BaseModel):
             # Define critic with Dropout here
             action_dim = get_action_dim(self.action_space)
             q_net = nn.Sequential(
-                nn.Linear(features_dim + action_dim, 200, bias=False),
+                nn.Linear(features_dim + action_dim, 200, bias=True),
                 nn.Tanh(),
-                nn.Linear(200, 200, bias=False),
+                nn.Linear(200, 200, bias=True),
                 nn.Tanh(),
-                nn.Linear(200, 1, bias=False),
-                nn.Tanh()
+                nn.Linear(200, 1, bias=True),
+                # nn.Tanh()
             )
             self.add_module(f"qf{idx}", q_net)
             self.q_networks.append(q_net)
@@ -97,9 +97,9 @@ class CustomTD3Policy(TD3Policy):
         actor_kwargs = self._update_features_extractor(self.actor_kwargs, features_extractor)
         return CustomActor(**actor_kwargs).to(self.device)
 
-    # def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> CustomContinuousCritic:
-    #     critic_kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
-    #     return CustomContinuousCritic(**critic_kwargs).to(self.device)
+    def make_critic(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> CustomContinuousCritic:
+        critic_kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
+        return CustomContinuousCritic(**critic_kwargs).to(self.device)
 
 
 register_policy("CustomTD3Policy", CustomTD3Policy)
