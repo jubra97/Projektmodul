@@ -89,7 +89,7 @@ class DirectControllerSim(DirectController):
         # action[0] = action[0] ** 2
         # create static input for every simulation step until next update of u.
 
-        new_action = self.last_u[-1] + action[0]
+        new_action = self.last_u[-1] + action[0]*2
         new_action = np.clip(new_action, -1, 1)
         system_input_trajectory = [new_action] * (self.sim.model_steps_per_controller_update + 1)
         self.update_simulation(system_input_trajectory)

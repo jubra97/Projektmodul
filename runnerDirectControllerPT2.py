@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     env = make_vec_env(DirectControllerSim, 6, vec_env_cls=SubprocVecEnv)  # create learning env
     # env = DirectControllerSim()
-    #
+
     # create action noise
     n_actions = env.action_space.shape[-1]
     action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.1) * np.ones(n_actions))
