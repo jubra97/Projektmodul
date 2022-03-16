@@ -3,11 +3,11 @@ from envs.DirectControllerOnlineConnection import DirectControllerOnlineConnecti
 from envs.DirectControllerOnline import DirectControllerOnline
 
 online_connection = DirectControllerOnlineConnection()
-env = DirectControllerOnline(online_connection)
+env = DirectControllerOnline(online_connection, output_freq=200)
 
 
 
-model = DDPG.load(r"C:\Users\brandlju\PycharmProjects\Projektmodul\eval\direct_with_error\end_model.zip", env)
+model = DDPG.load(r"C:\Users\brandlju\PycharmProjects\Projektmodul\eval\direct_with_error\end_model2.zip", env)
 
 
 while True:
