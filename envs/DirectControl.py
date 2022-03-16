@@ -193,7 +193,7 @@ class DirectController(gym.Env, abc.ABC):
         self.integrated_error += error_smooth[-1] * 1 / self.measurements_per_output_update
 
         error_vel = (error_smooth[-2] - error_smooth[-1]) * 1 /self.measurements_per_output_update
-        input_vel = (system_inputs[-41] - system_inputs[-1]) * 1 / self.measurements_per_output_update
+        input_vel = (system_inputs[-(self.measurements_per_output_update + 1)] - system_inputs[-1]) * 1 / self.measurements_per_output_update
 
         # old_obs = self._create_obs_with_vel()
 
