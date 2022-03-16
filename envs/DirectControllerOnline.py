@@ -8,7 +8,7 @@ from envs.DirectControl import DirectController
 
 
 class DirectControllerOnline(DirectController):
-    def __init__(self, online_sys=None, sensor_freq=4000, log=True):
+    def __init__(self, online_sys=None, log=True,  output_freq=100, sensor_freq=4000):
         """
         Create a gym environment to directly control the actuating value (u) the given online system.
         :param online_sys: Connection to the online system.
@@ -24,7 +24,7 @@ class DirectControllerOnline(DirectController):
         self.last_step_time = None
         self.last_reset_time = None
 
-        super().__init__(log=log)
+        super().__init__(log=log, output_freq=output_freq, sensor_freq=sensor_freq)
 
     def custom_reset(self):
         """
@@ -70,7 +70,7 @@ class DirectControllerOnline(DirectController):
                 ...  # busy waiting is necessary as non busy waiting is not precised enough
         self.last_step_time = time.perf_counter()
 
-        u = self.last_u[-1] + (action[0] / 4)
+        u = self.last_u[-1] + (action[0])
         u = np.clip(u, -1, 1)
         # do logging
         if self.log:
@@ -84,10 +84,11 @@ class DirectControllerOnline(DirectController):
                 self.episode_log["action"]["value"].append(0)
 
         # get newest data from online system; create obs and reward and set u
+        self.online_system.set_u(u)
         self.update_input()
         obs = self.observation_function()
         reward = self.reward_function()
-        self.online_system.set_u(u)
+
 
         if self.last_t[-1] > 5 and self.timesteps_last_episode > 1:  # one episode is 3 seconds long
             done = True
@@ -118,106 +119,6 @@ class DirectControllerOnline(DirectController):
                 except IndexError:
                     ...
 
-
-    # def create_reward(self, current_u):
-    #     """
-    #     Compute reward according to current u and system state.
-    #     :param current_u: U
-    #     :return:
-    #     """
-    #
-    #     # only possible if online data is available
-    #     if self.y.size < 2:
-    #         return 0
-    #
-    #     # compute control error
-    #     y = np.array(self.y)
-    #     w = np.array(self.w)
-    #     e = np.mean(w - y)
-    #
-    #     # add a penalty for changing u to achieve a non oscillating u / system
-    #     if self.last_u is None or current_u is None:
-    #         pen_action = 0
-    #     else:
-    #         action_change = abs(current_u - self.last_u)
-    #         pen_action = np.sqrt(action_change) * 3
-    #
-    #     abs_error = abs(e)
-    #     pen_error = np.abs(e)  # add penalty for high error between y and w
-    #
-    #     # add a reward for achieving smaller errors. Results in better training.
-    #     reward = 0
-    #     if abs_error < 0.5:
-    #         reward += 1
-    #     if abs_error < 0.1:
-    #         reward += 2
-    #     if abs_error < 0.05:
-    #         reward += 3
-    #     if abs_error < 0.02:
-    #         reward += 4
-    #     if abs_error < 0.01:
-    #         reward += 5
-    #     if abs_error < 0.005:
-    #         reward += 10
-    #
-    #     reward -= pen_error
-    #     reward -= pen_action
-    #
-    #     if self.log:
-    #         self.episode_log["rewards"]["summed"].append(reward)
-    #         self.episode_log["rewards"]["pen_error"].append(-pen_error)
-    #         self.episode_log["rewards"]["pen_action"].append(-pen_action)
-    #
-    #     return reward
-    #
-    # def create_obs(self, current_u):
-    #     """
-    #     Create Observation consistent of [set_point (w), system_input (u), system_output (y), dot_w, dot_u, dot_y]
-    #     :param current_u: Current u (action)
-    #     :return:
-    #     """
-    #     if self.w.size < 2:
-    #         print("Obs wrong")
-    #         print(self.w)
-    #         return [0, 0, 0, 0]
-    #
-    #     set_point = self.w[-1]
-    #     set_point_vel = (self.w[-1] - self.w[-2]) * 1 / self.sample_freq
-    #     system_output = self.y[-1]
-    #     system_output_vel = (self.y[-1] - self.y[-2]) * 1 / self.sample_freq
-    #     system_input = (self.u[-1] / 250) - 1
-    #     error = self.w[-1] - self.y[-1]
-    #     error_vel = ((self.w[-1] - self.y[-1]) - (self.w[-2] - self.y[-2])) * 1 / self.sample_freq
-    #
-    #     if self.last_u is None or current_u is None:
-    #         input_vel = 0
-    #     else:
-    #         input_vel = (current_u - self.last_u) * 1 / self.sample_freq
-    #
-    #     # self.episode_log["obs"]["set_point"].append(set_point)
-    #     # self.episode_log["obs"]["set_point_vel"].append(set_point_vel)
-    #     # self.episode_log["obs"]["system_output"].append(system_output)
-    #     # self.episode_log["obs"]["system_output_vel"].append(system_output_vel)
-    #     # self.episode_log["obs"]["system_input"].append(system_input)
-    #     # self.episode_log["obs"]["input_vel"].append(input_vel)
-    #     #
-    #     # obs = [set_point, system_input, system_output, set_point_vel, input_vel, system_output_vel]
-    #     # obs[2] = 0
-    #     # obs[-1] = 0
-    #
-    #     self.episode_log["obs"]["error"].append(error)
-    #     self.episode_log["obs"]["error_vel"].append(error_vel)
-    #     self.episode_log["obs"]["system_input"].append(system_input)
-    #     self.episode_log["obs"]["input_vel"].append(input_vel)
-    #
-    #     obs = [error, system_input, error_vel, input_vel]
-    #
-    #
-    #     return np.array(obs)
-    #
-    # def render(self, mode="human"):
-    #     pass
-    #
     def create_eval_plot(self):
         fig, ax = plt.subplots(2, 2, figsize=(20, 12))
 
