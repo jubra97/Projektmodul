@@ -17,11 +17,11 @@ class CustomActor(Actor):
         # WARNING: it must end with a tanh activation to squash the output
         action_dim = get_action_dim(self.action_space)
         self.mu = nn.Sequential(
-            nn.Linear(self.features_dim, 5, bias=False),
-            nn.Tanh(),
-            nn.Linear(5, 5, bias=False),
-            nn.Tanh(),
-            nn.Linear(5, action_dim, bias=False),
+            nn.Linear(self.features_dim, 1, bias=False),
+            # nn.ReLU(),
+            # nn.Linear(5, action_dim, bias=False),
+            # nn.ReLU(),
+            # nn.Linear(5, action_dim, bias=False),
             nn.Tanh()
         )
 

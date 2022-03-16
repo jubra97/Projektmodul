@@ -1,6 +1,8 @@
 import numpy as np
 import torch as th
 import os
+import wandb
+from wandb.integration.sb3 import WandbCallback
 from stable_baselines3 import DDPG, TD3
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
@@ -19,6 +21,25 @@ af = th.nn.Tanh
 
 
 if __name__ == "__main__":
+
+    config = {
+        "policy_type": "MlpPolicy",
+        "total_timesteps": 25000,
+        "env_name": DirectControllerSim(),
+    }
+
+
+
+
+    run = wandb.init(
+        project="sb3",
+        config=config,
+        sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+        # monitor_gym=True,  # auto-upload the videos of agents playing the game
+        save_code=True,  # optional
+    )
+
+    # model = DDPG(config["policy_type"], config["env_name"], verbose=1, tensorboard_log=f"runs/{run.id}")
 
     dir = os.listdir(r"eval\RUN")
     if dir:
@@ -41,9 +62,9 @@ if __name__ == "__main__":
     online_eval_env = DirectControllerSim(log=True)  # create eval env
     online_eval_env = Monitor(online_eval_env)
     eval_callback = CustomEvalCallback(online_eval_env, eval_freq=1500, deterministic=True, best_model_save_path=f"eval\\{RUN_NAME}\\best_model")
-
+    wandb_callback = WandbCallback(model_save_path=f"models/{run.id}", verbose=2)
     # create callback list
-    callbacks = CallbackList([eval_callback])
+    callbacks = CallbackList([eval_callback, wandb_callback])
 
     # # use DDPG and create a tensorboard
     # # start tensorboard server with tensorboard --logdir ./{tensorboard_log}/
@@ -60,8 +81,10 @@ if __name__ == "__main__":
                  gradient_steps=1,
                  learning_rate=1e-3
                  )
-    model.learn(total_timesteps=200_000, tb_log_name=f"{RUN_NAME}", callback=callbacks)
+    model.learn(total_timesteps=10_000, tb_log_name=f"{RUN_NAME}", callback=callbacks)
     DirectControllerSim(log=True).eval(model, folder_name=RUN_NAME)
     # #
     # # # save model if you want to
     model.save(f"eval\\{RUN_NAME}\\model")
+
+    wandb.finish()
