@@ -84,7 +84,7 @@ class DirectController(gym.Env, abc.ABC):
                                            shape=(1,),
                                            dtype=np.float32)
 
-    def reset(self, step_start=None, step_end=None, step_slope=None, custom_w=None):
+    def reset(self, *args, **kwargs):
         """
         Reset the environment. Called before every start of a new episode. If no custom reference value (custom_w) is
         given a ramp (or step) is used.
@@ -122,7 +122,7 @@ class DirectController(gym.Env, abc.ABC):
             self.episode_log["function"]["y"] = None
 
         self.integrated_error = 0
-        self.custom_reset()
+        self.custom_reset(*args, **kwargs)
         obs = self.observation_function()
         return obs
 
