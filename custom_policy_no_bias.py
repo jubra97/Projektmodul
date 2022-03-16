@@ -22,7 +22,7 @@ class CustomActor(Actor):
             # nn.Linear(5, action_dim, bias=False),
             # nn.ReLU(),
             # nn.Linear(5, action_dim, bias=False),
-            nn.Tanh()
+            nn.Hardtanh()
         )
 
 
