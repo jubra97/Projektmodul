@@ -1,0 +1,52 @@
+command:
+  - venv\Scripts\python.exe
+  - ${program}
+  - ${args}
+program: runnerDirectControlPT2_WaB.py
+method: random
+metric:
+  name: rollout/ep_rew_mean
+  goal: maximize
+parameters:
+  actor_layers:
+    values:
+      - 0
+      - 1
+      - 2
+  actor_layer_width:
+    values:
+      - 1
+      - 3
+      - 5
+      - 10
+  actor_activation_fun:
+      values:
+        - nn.ReLU()
+        - nn.Tanh()
+        - nn.Sigmoid()
+  actor_end_activation_fun:
+    values:
+      - nn.Tanh()
+      - nn.Hardtanh()
+  critic_layers:
+    values:
+      - 0
+      - 1
+      - 2
+  critic_layer_width:
+    values:
+      - 1
+      - 10
+      - 50
+      - 100
+      - 200
+      - 300
+  critic_activation_fun:
+    values:
+      - nn.ReLU()
+      - nn.Tanh()
+      - nn.Sigmoid()
+  critic_bias:
+    values:
+      - True
+      - False

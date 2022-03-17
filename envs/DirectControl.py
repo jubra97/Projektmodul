@@ -399,7 +399,7 @@ class DirectController(gym.Env, abc.ABC):
         steps = np.linspace(0, 0.5, 20)
         slopes = np.linspace(0, 0.5, 3)
         i = 1
-        pathlib.Path(f"eval\\{folder_name}").mkdir(exist_ok=True)
+        pathlib.Path(f"{folder_name}").mkdir(exist_ok=True)
         rewards = []
         rmse = []
         sms = []
@@ -419,7 +419,7 @@ class DirectController(gym.Env, abc.ABC):
                 _, _, _, smoothness = self.eval_fft()
                 sms.append(smoothness)
                 fig = self.create_eval_plot()
-                plt.savefig(f"eval\\{folder_name}\\{i}_{step}_{slope}.png")
+                plt.savefig(f"{folder_name}\\{i}_{step}_{slope}.png")
                 plt.close()
                 i += 1
                 rmse_episode = np.sqrt(np.square(np.array(self.w) - np.array(self.sim._sim_out)))
@@ -429,6 +429,8 @@ class DirectController(gym.Env, abc.ABC):
         extra_info["rmse"] = np.mean(rmse)
         extra_info["smoothness"] = np.mean(sms)
 
-        with open(f"eval\\{folder_name}\\extra_info.json", 'w+') as f:
+        with open(f"{folder_name}\\extra_info.json", 'w+') as f:
             json.dump(extra_info, f)
         print(f"Eval Info: RMSE: {np.mean(rmse)} --- Smoothness: {np.mean(sms)}")
+
+        return extra_info
