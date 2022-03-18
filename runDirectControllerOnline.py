@@ -7,7 +7,7 @@ env = DirectControllerOnline(online_connection, output_freq=200)
 
 
 
-model = DDPG.load(r"C:\Users\brandlju\PycharmProjects\Projektmodul\eval\direct_with_error\end_model2.zip", env)
+model = DDPG.load(r"C:\Users\brandlju\PycharmProjects\Projektmodul\working_online_agents\1\end_model2.zip", env)
 
 
 while True:
