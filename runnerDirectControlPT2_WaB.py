@@ -19,10 +19,10 @@ import multiprocessing
 if __name__ == "__main__":
 
     hyperparameter_defaults = {
-        "actor_layers": 1,
-        "actor_layer_width": 3,
-        "actor_activation_fun": "nn.ReLU()",
-        "actor_end_activation_fun": "nn.Tanh()",
+        "actor_layers": 2,
+        "actor_layer_width": 5,
+        "actor_activation_fun": "nn.Tanh()",
+        "actor_end_activation_fun": "nn.Hardtanh()",
         "critic_layers": 1,
         "critic_layer_width": 50,
         "critic_activation_fun": "nn.ReLU()",
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     online_eval_env = DirectControllerSim(log=True)  # create eval env
     online_eval_env = Monitor(online_eval_env)
     eval_callback = CustomEvalCallback(online_eval_env, eval_freq=3000, deterministic=True,
-                                       best_model_save_path=f"{run.id}\\best_model")
+                                       best_model_save_path=f"models/{run.id}\\best_model")
     wandb_callback = WandbCallback(model_save_path=f"models/{run.id}", verbose=2)
     # create callback list
     callbacks = CallbackList([eval_callback, wandb_callback])
