@@ -65,7 +65,7 @@ for actor_net in [[20, 20]]:
             action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.005) * np.ones(n_actions))
 
             # create eval callback
-            eval_callback = CustomEvalCallback(online_eval_env, best_model_save_path=f"eval\\{RUN_NAME}\\best_model2", eval_freq=1500, deterministic=True)
+            eval_callback = CustomEvalCallback(online_eval_env, best_model_save_path=f"eval\\{RUN_NAME}\\best_model", eval_freq=1500, deterministic=True)
 
             # create callback list
             callbacks = CallbackList([eval_callback])

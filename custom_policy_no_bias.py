@@ -36,6 +36,8 @@ class CustomActor(Actor):
             net_dict.append(end_activation_fun)
 
         self.mu = nn.Sequential(*net_dict)
+        print("Actor Net")
+        print(self.mu)
 
 
 class CustomContinuousCritic(BaseModel):
@@ -92,6 +94,7 @@ class CustomContinuousCritic(BaseModel):
             q_net = nn.Sequential(*net_dict)
             self.add_module(f"qf{idx}", q_net)
             self.q_networks.append(q_net)
+        print(self.q_networks[0])
 
     def forward(self, obs: th.Tensor, actions: th.Tensor) -> Tuple[th.Tensor, ...]:
         # Learn the features extractor using the policy loss only
@@ -114,7 +117,7 @@ class CustomContinuousCritic(BaseModel):
 
 class CustomTD3Policy(TD3Policy):
     def __init__(self, *args, **kwargs):
-        actor_layers = kwargs.pop("actor_layers", 2)
+        actor_layers = kwargs.pop("actor_layers", 0)
         actor_layer_width = kwargs.pop("actor_layer_width", 5)
         actor_activation_fun = kwargs.pop("actor_activation_fun", nn.Tanh())
         actor_end_activation_fun = kwargs.pop("actor_end_activation_fun", nn.Hardtanh())
