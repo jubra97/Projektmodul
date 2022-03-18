@@ -1,0 +1,11 @@
+Obs: Error, ErrorVel*10, ErrorIntegral, InputVel*10
+Reward: Discrete, Penalty ActionChange abhängig von Error
+
+ActorNet: 4, 1; Tanh
+CriticNet 4+1, 200, 200, 1, Tanh
+
+GitCommit: e85d333b
+
+
+Online Sys:
++1, *250

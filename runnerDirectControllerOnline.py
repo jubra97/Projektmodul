@@ -75,18 +75,18 @@ for actor_net in [[20, 20]]:
             # policy_kwargs = dict(activation_fn=th.nn.Tanh)
             policy_kwargs = dict(net_arch=dict(pi=actor_net, qf=critic_net), activation_fn=af)
 
-            # model = DDPG("CustomTD3Policy",
-            #              env,
-            #              learning_starts=6000,
-            #              verbose=2,
-            #              action_noise=action_noise,
-            #              tensorboard_log="./direct_with_error/",
-            #              policy_kwargs=policy_kwargs,
-            #              )
+            model = DDPG("CustomTD3Policy",
+                         env,
+                         learning_starts=6000,
+                         verbose=2,
+                         action_noise=action_noise,
+                         tensorboard_log="./direct_with_error/",
+                         policy_kwargs=policy_kwargs,
+                         )
 
-            model = DDPG.load(r"C:\Users\brandlju\PycharmProjects\Projektmodul\eval\direct_with_error\end_model2.zip", env, force_reset=True,
-                              custom_objects={"learning_starts": 0,
-                                              "action_noise": action_noise})
+            # model = DDPG.load(r"C:\Users\brandlju\PycharmProjects\Projektmodul\eval\direct_with_error\end_model2.zip", env, force_reset=True,
+            #                   custom_objects={"learning_starts": 0,
+            #                                   "action_noise": action_noise})
 
             model.learn(total_timesteps=50_000, tb_log_name=f"RUN", callback=callbacks, log_interval=1)
             # # utils.eval(PIControllerOnline(log=True), model, folder_name=RUN_NAME)
