@@ -13,14 +13,10 @@ class CustomActor(Actor):
     Actor network (policy) for TD3.
     """
     def __init__(self, *args, **kwargs):
-        layers = kwargs["layers"]
-        layer_width = kwargs["layer_width"]
-        activation_fun = kwargs["activation_fun"]
-        end_activation_fun = kwargs["end_activation_fun"]
-        del kwargs["layers"]
-        del kwargs["layer_width"]
-        del kwargs["activation_fun"]
-        del kwargs["end_activation_fun"]
+        layers = kwargs.pop("layers")
+        layer_width = kwargs.pop("layer_width")
+        activation_fun = kwargs.pop("activation_fun")
+        end_activation_fun = kwargs.pop("end_activation_fun")
         super(CustomActor, self).__init__(*args, **kwargs)
         # Define custom network with Dropout
         # WARNING: it must end with a tanh activation to squash the output
@@ -33,10 +29,10 @@ class CustomActor(Actor):
             for _ in range(layers-1):
                 net_dict.append(nn.Linear(layer_width, layer_width, bias=False))
                 net_dict.append(activation_fun)
-            net_dict.append(nn.Linear(layer_width, 1, bias=False))
+            net_dict.append(nn.Linear(layer_width, action_dim, bias=False))
             net_dict.append(end_activation_fun)
         else:
-            net_dict.append(nn.Linear(self.features_dim, 1, bias=False))
+            net_dict.append(nn.Linear(self.features_dim, action_dim, bias=False))
             net_dict.append(end_activation_fun)
 
         self.mu = nn.Sequential(*net_dict)
@@ -90,10 +86,8 @@ class CustomContinuousCritic(BaseModel):
                     net_dict.append(nn.Linear(layer_width, layer_width, bias=bias))
                     net_dict.append(activation_fun)
                 net_dict.append(nn.Linear(layer_width, 1, bias=bias))
-                net_dict.append(activation_fun)
             else:
                 net_dict.append(nn.Linear(features_dim + action_dim, 1, bias=bias))
-                net_dict.append(activation_fun)
 
             q_net = nn.Sequential(*net_dict)
             self.add_module(f"qf{idx}", q_net)
@@ -120,27 +114,21 @@ class CustomContinuousCritic(BaseModel):
 
 class CustomTD3Policy(TD3Policy):
     def __init__(self, *args, **kwargs):
-        actor_layers = kwargs["actor_layers"]
-        actor_layer_width = kwargs["actor_layer_width"]
-        actor_activation_fun = kwargs["actor_activation_fun"]
-        actor_end_activation_fun = kwargs["actor_end_activation_fun"]
-        del kwargs["actor_layers"]
-        del kwargs["actor_layer_width"]
-        del kwargs["actor_activation_fun"]
-        del kwargs["actor_end_activation_fun"]
+        actor_layers = kwargs.pop("actor_layers", 2)
+        actor_layer_width = kwargs.pop("actor_layer_width", 5)
+        actor_activation_fun = kwargs.pop("actor_activation_fun", nn.Tanh())
+        actor_end_activation_fun = kwargs.pop("actor_end_activation_fun", nn.Hardtanh())
+
         self.custom_actor_kwargs = {"layers": actor_layers,
                                     "layer_width": actor_layer_width,
                                     "activation_fun": actor_activation_fun,
                                     "end_activation_fun": actor_end_activation_fun}
         
-        critic_layers = kwargs["critic_layers"]
-        critic_layer_width = kwargs["critic_layer_width"]
-        critic_activation_fun = kwargs["critic_activation_fun"]
-        critic_bias = kwargs["critic_bias"]
-        del kwargs["critic_layers"]
-        del kwargs["critic_layer_width"]
-        del kwargs["critic_activation_fun"]
-        del kwargs["critic_bias"]
+        critic_layers = kwargs.pop("critic_layers", 2)
+        critic_layer_width = kwargs.pop("critic_layer_width", 200)
+        critic_activation_fun = kwargs.pop("critic_activation_fun", nn.Tanh())
+        critic_bias = kwargs.pop("critic_bias", True)
+
         self.custom_critic_kwargs = {"layers": critic_layers,
                                      "layer_width": critic_layer_width,
                                      "activation_fun": critic_activation_fun,
