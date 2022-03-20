@@ -240,17 +240,17 @@ class DirectController(gym.Env, abc.ABC):
 
         # old_obs = self._create_obs_with_vel()
 
-        obs = [error_smooth[-1],  error_vel * 10, self.integrated_error, input_vel*10]
-        # obs = old_obs.tolist() + [error_smooth[-1], system_inputs[-1], error_vel, input_vel]
-        # obs = [error_smooth[-1], error_vel]
-
-        if self.log:
-            self.episode_log["obs"]["error"].append(obs[0])
-            # self.episode_log["obs"]["system_input"].append(obs[3])
-            self.episode_log["obs"]["error_vel"].append(obs[1])
-            self.episode_log["obs"]["input_vel"].append(obs[3])
-            self.episode_log["obs"]["error_integrated"].append(obs[2])
-            # self.episode_log["obs"]["system_output"].append(obs[4])
+        # obs = [error_smooth[-1],  error_vel * 10, self.integrated_error, input_vel*10]
+        # # obs = old_obs.tolist() + [error_smooth[-1], system_inputs[-1], error_vel, input_vel]
+        # # obs = [error_smooth[-1], error_vel]
+        #
+        # if self.log:
+        #     self.episode_log["obs"]["error"].append(obs[0])
+        #     # self.episode_log["obs"]["system_input"].append(obs[3])
+        #     self.episode_log["obs"]["error_vel"].append(obs[1])
+        #     self.episode_log["obs"]["input_vel"].append(obs[3])
+        #     self.episode_log["obs"]["error_integrated"].append(obs[2])
+        #     # self.episode_log["obs"]["system_output"].append(obs[4])
         return np.array(obs)
 
     def _create_obs_last_errors(self):
