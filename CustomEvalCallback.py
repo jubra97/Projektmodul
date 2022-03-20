@@ -97,7 +97,7 @@ class CustomEvalCallback(BaseCallback):
                 rewards.append(reward)
 
             print(f"Logging Image Call Nr: {self.n_calls}")
-            fig = self.eval_env.create_eval_plot()
+            fig, _ = self.eval_env.create_eval_plot()
             self.logger.record("Overview/A", Figure(fig, close=True), exclude=("stdout", "log", "json", "csv"))
             plt.close()
             mean_reward = np.mean(rewards)

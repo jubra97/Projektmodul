@@ -11,9 +11,17 @@ from scipy.fft import fft, fftfreq
 
 class DirectController(gym.Env, abc.ABC):
 
-    def __init__(self, log=False, output_freq=100, sensor_freq=4000, reward_function="discrete", observation_function="error_with_vel",
+    def __init__(self,
+                 log=False,
+                 output_freq=100,
+                 sensor_freq=4000,
+                 obs_config=None,
+                 reward_function="discrete",
+                 observation_function="error_with_vel",
                  oscillation_pen_gain=0.01,
-                 oscillation_pen_fun=np.sqrt, error_pen_fun=None):
+                 oscillation_pen_fun=np.sqrt,
+                 error_pen_fun=None
+                 ):
         """
         Create a gym environment to directly control the actuating value (u) of a system.
         :param log: Log the simulation outcomes.
@@ -22,6 +30,8 @@ class DirectController(gym.Env, abc.ABC):
 
         # set reward function
         if reward_function == "discrete":
+            self.reward_function = self._create_reward_discrete2
+        if reward_function == "discrete_u_pen_dep_on_error":
             self.reward_function = self._create_reward_discrete
         elif reward_function == "normal":
             self.reward_function = self._create_reward
@@ -54,6 +64,7 @@ class DirectController(gym.Env, abc.ABC):
         assert sensor_freq % output_freq == 0, "sensor_freq must be a multiple ot output_freq!"
         self.measurements_per_output_update = int(sensor_freq / output_freq)
         self.nbr_measurements_to_keep = self.measurements_per_output_update * 2
+        self.obs_config = obs_config
 
         # create fifo lists for latest measurement points, new data is inserted from the right side. Because of this the
         # most recent value is the in e.g. self.last_y[-1].
@@ -190,10 +201,42 @@ class DirectController(gym.Env, abc.ABC):
         error_smooth[-1] = np.mean(errors[-10:])
         error_smooth[-2] = np.mean(errors[-20:-10])
 
+        output_smooth = np.mean(system_outputs[-10:])
+        input_smooth = np.mean(system_outputs[-10:])
+
         self.integrated_error += error_smooth[-1] * 1 / self.measurements_per_output_update
 
         error_vel = (error_smooth[-2] - error_smooth[-1]) * 1 /self.measurements_per_output_update
         input_vel = (system_inputs[-(self.measurements_per_output_update + 1)] - system_inputs[-1]) * 1 / self.measurements_per_output_update
+        output_vel = (system_outputs[-(self.measurements_per_output_update + 1)] - system_outputs[-1]) * 1 / self.measurements_per_output_update
+
+        obs = [error_smooth[-1]]
+        if self.log:
+            self.episode_log["obs"]["error"].append(obs[-1])
+        if self.obs_config["i"]:
+            obs.append(self.integrated_error)
+            if self.log:
+                self.episode_log["obs"]["error_integrated"].append(obs[-1])
+        if self.obs_config["d"]:
+            obs.append(error_vel * 10)
+            if self.log:
+                self.episode_log["obs"]["error_vel"].append(obs[-1])
+        if self.obs_config["input_vel"]:
+            obs.append(input_vel * 10)
+            if self.log:
+                self.episode_log["obs"]["input_vel"].append(obs[-1])
+        if self.obs_config["output_vel"]:
+            obs.append(output_vel * 10)
+            if self.log:
+                self.episode_log["obs"]["outputs_vel"].append(obs[-1])
+        if self.obs_config["output"]:
+            obs.append(output_smooth)
+            if self.log:
+                self.episode_log["obs"]["system_output"].append(obs[-1])
+        if self.obs_config["input"]:
+            obs.append(input_smooth)
+            if self.log:
+                self.episode_log["obs"]["system_input"].append(obs[-1])
 
         # old_obs = self._create_obs_with_vel()
 
@@ -307,6 +350,54 @@ class DirectController(gym.Env, abc.ABC):
             self.episode_log["rewards"]["pen_error"].append(-pen_error)
         return reward
 
+    def _create_reward_discrete2(self):
+        # get latest system attributes and calculate error/ integrated error
+        y = np.array(list(self.last_y)[-self.measurements_per_output_update:])
+        w = np.array(list(self.last_w)[-self.measurements_per_output_update:])
+        e = np.mean(w - y)
+
+        # calculate action change
+        action_change = (self.last_u[-(self.measurements_per_output_update + 1)]
+                         - self.last_u[-self.measurements_per_output_update]) \
+                        * (1 / self.measurements_per_output_update)
+
+        abs_error = abs(e)
+
+        if self.error_pen_fun:
+            pen_error = self.error_pen_fun(abs(e))
+        else:
+            pen_error = abs(e)
+
+        if self.oscillation_pen_fun:
+            pen_action = self.oscillation_pen_fun(action_change) * 5
+        else:
+            pen_action = abs(action_change) * self.oscillation_pen_gain
+
+        reward = 0
+        if abs_error < 0.5:
+            reward += 1
+        if abs_error < 0.1:
+            reward += 2
+        if abs_error < 0.05:
+            reward += 3
+        if abs_error < 0.02:
+            reward += 4
+        if abs_error < 0.01:
+            reward += 5
+        if abs_error < 0.005:
+            reward += 10
+        if abs_error < 0.0005:
+            reward += 10
+
+        reward -= pen_error
+        reward -= pen_action
+
+        if self.log:
+            self.episode_log["rewards"]["summed"].append(reward)
+            self.episode_log["rewards"]["pen_action"].append(-pen_action)
+            self.episode_log["rewards"]["pen_error"].append(-pen_error)
+        return reward
+
     @abc.abstractmethod
     def step(self, action):
         """
@@ -387,7 +478,7 @@ class DirectController(gym.Env, abc.ABC):
         ax[1][2].grid()
 
         fig.tight_layout()
-        return fig
+        return fig, ax
 
     def eval(self, model, folder_name):
         """
@@ -403,6 +494,8 @@ class DirectController(gym.Env, abc.ABC):
         rewards = []
         rmse = []
         sms = []
+        rise_times = []
+        setting_times = []
         extra_info = {}
         for step in steps:
             for slope in slopes:
@@ -418,15 +511,47 @@ class DirectController(gym.Env, abc.ABC):
                     actions.append(action)
                 _, _, _, smoothness = self.eval_fft()
                 sms.append(smoothness)
-                fig = self.create_eval_plot()
+                fig, ax = self.create_eval_plot()
+
+                np_sim_out = np.array(self.sim._sim_out)
+
+                rmse_episode = np.sqrt(np.square(np.array(self.w) - np_sim_out))
+                rmse.append(rmse_episode)
+
+                if slope == 0:
+                    # calculate rise time from 0.1 to 0.9 of step
+                    rise_start = 0.1 * step
+                    rise_stop = 0.9 * step
+                    start_time = int(self.sim.model_freq * 0.5)
+                    print(start_time)
+                    index_start = np.argmax(np_sim_out[start_time:] > rise_start)
+                    index_end = np.argmax(np_sim_out[start_time:] > rise_stop)
+                    rise_time = (index_end - index_start) / self.sim.model_freq
+                    rise_times.append(rise_time)
+
+                    # calculate setting time with 5% band
+                    lower_bound = step - step * 0.05
+                    upper_bound = step + step * 0.05
+                    # go backwards through sim._sim_out and find first index out of bounds
+                    index_lower = np.argmax(np_sim_out[::-1] < lower_bound)
+                    index_upper = np.argmax(np_sim_out[::-1] > upper_bound)
+                    last_out_of_bounds = min([index_lower, index_upper])
+                    setting_time = (self.sim.n_sample_points - last_out_of_bounds - start_time) / self.sim.model_freq
+                    setting_times.append(setting_time)
+
+                    ax[0][2].text(0.1, 0.9, f"Rise Time: {rise_time}", transform=ax[0][2].transAxes)
+                    ax[0][2].text(0.1, 0.7, f"Setting Time: {setting_time}", transform=ax[0][2].transAxes)
+                ax[0][2].text(0.1, 0.5, f"Mean RMSE: {np.mean(rmse_episode)}", transform=ax[0][2].transAxes)
                 plt.savefig(f"{folder_name}\\{i}_{step}_{slope}.png")
                 plt.close()
                 i += 1
-                rmse_episode = np.sqrt(np.square(np.array(self.w) - np.array(self.sim._sim_out)))
-                rmse.append(rmse_episode)
+
         mean_episode_reward = np.sum(rewards) / self.n_episodes
         extra_info["mean_episode_reward"] = mean_episode_reward
         extra_info["rmse"] = np.mean(rmse)
+        extra_info["max_rmse"] = np.max(rmse)
+        extra_info["mean_rise_time"] = np.mean(rise_times)
+        extra_info["mean_setting_time"] = np.mean(setting_times)
         extra_info["smoothness"] = np.mean(sms)
 
         with open(f"{folder_name}\\extra_info.json", 'w+') as f:
