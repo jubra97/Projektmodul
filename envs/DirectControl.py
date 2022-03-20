@@ -523,7 +523,6 @@ class DirectController(gym.Env, abc.ABC):
                     rise_start = 0.1 * step
                     rise_stop = 0.9 * step
                     start_time = int(self.sim.model_freq * 0.5)
-                    print(start_time)
                     index_start = np.argmax(np_sim_out[start_time:] > rise_start)
                     index_end = np.argmax(np_sim_out[start_time:] > rise_stop)
                     rise_time = (index_end - index_start) / self.sim.model_freq
