@@ -10,14 +10,11 @@ metric:
 parameters:
   critic_layers:
     values:
-      - 0
       - 1
       - 2
       - 3
   critic_layer_width:
     values:
-      - 1
-      - 10
       - 50
       - 100
       - 200
@@ -26,8 +23,40 @@ parameters:
     values:
       - nn.ReLU()
       - nn.Tanh()
-      - nn.Sigmoid()
-  critic_bias:
+  actor_layers:
+    values:
+      - 0
+      - 1
+      - 2
+  actor_activation_fun:
+    values:
+      - nn.ReLU()
+      - nn.Tanh()
+  obs_i:
     values:
       - True
       - False
+  obs_d:
+    values:
+      - True
+      - False
+  obs_input_vel:
+    values:
+      - True
+      - False
+  obs_output_vel:
+    values:
+      - True
+      - False
+  obs_output:
+    values:
+      - True
+      - False
+  obs_input:
+    values:
+      - True
+      - False
+  reward_fun:
+    values:
+      - discrete
+      - discrete_u_pen_dep_on_error
