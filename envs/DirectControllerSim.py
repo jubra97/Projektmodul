@@ -8,13 +8,33 @@ from envs.DirectControl import DirectController
 
 
 class DirectControllerSim(DirectController):
-    def __init__(self, log=False):
+    def __init__(self,
+                 log=False,
+                 model_freq=12_000,
+                 output_freq=100,
+                 sensor_freq=4000,
+                 obs_config=None,
+                 reward_function="discrete",
+                 observation_function="error_with_vel",
+                 oscillation_pen_gain=0.01,
+                 oscillation_pen_fun=np.sqrt,
+                 error_pen_fun=None
+                 ):
         sys = control.tf([3.55e3], [0.00003, 0.0014, 1])  # pt2 of dms
         # create simulation object with an arbitrary tf.
-        self.sim = OpenLoopSim(sys, 12_000, 4000, 100, action_scale=500, obs_scale=3_000_000, simulation_time=1.5)
+        self.sim = OpenLoopSim(sys, model_freq, sensor_freq, output_freq, action_scale=500, obs_scale=3_000_000, simulation_time=1.5)
         self.sys_gain = (self.sim.sys.C @ np.linalg.inv(-self.sim.sys.A) @ self.sim.sys.B + self.sim.sys.D)[0][0]
 
-        super().__init__(log=log, sensor_freq=4000)
+        super().__init__(log=log,
+                         sensor_freq=sensor_freq,
+                         output_freq=output_freq,
+                         obs_config=obs_config,
+                         reward_function=reward_function,
+                         observation_function=observation_function,
+                         oscillation_pen_gain=oscillation_pen_gain,
+                         oscillation_pen_fun=oscillation_pen_fun,
+                         error_pen_fun=error_pen_fun,
+                         )
 
     def custom_reset(self, step_start=None, step_end=None, step_slope=None, custom_w=None):
         # reset simulation
@@ -62,7 +82,8 @@ class DirectControllerSim(DirectController):
         return w
 
     def update_simulation(self, u_trajectory):
-        w_current_sim_step = self.w[self.sim.current_simulation_step+len(u_trajectory):self.sim.current_simulation_step+1:-self.sim.model_steps_per_senor_update][::-1]
+        w_current_sim_step = self.w[self.sim.current_simulation_step + len(
+            u_trajectory):self.sim.current_simulation_step + 1:-self.sim.model_steps_per_senor_update][::-1]
         # simulate system until next update of u.
         t, u, y = self.sim.sim_one_step(u=u_trajectory, add_noise=True)
 
@@ -78,7 +99,6 @@ class DirectControllerSim(DirectController):
             self.last_y.append(y[step])
             self.last_w.append(w_current_sim_step[step])
 
-
     def step(self, action):
         """
         Step the environment for one update step of the action. Collect sensor values of the simulation and compute
@@ -89,7 +109,7 @@ class DirectControllerSim(DirectController):
         # action[0] = action[0] ** 2
         # create static input for every simulation step until next update of u.
 
-        new_action = self.last_u[-1] + action[0]*2
+        new_action = self.last_u[-1] + action[0] * 2
         new_action = np.clip(new_action, -1, 1)
         system_input_trajectory = [new_action] * (self.sim.model_steps_per_controller_update + 1)
         self.update_simulation(system_input_trajectory)
