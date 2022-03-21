@@ -1,3 +1,4 @@
+from black import out
 import torch
 import torch.nn as nn
 from NARXNET import NARXNET
@@ -40,21 +41,25 @@ class ANARX(NARXNET):
             torch.Tensor: Output. Shape should be [1]
         """
         inputs = self.prepare_inputs(output_lagged, inputs_lagged)
-        outputs = torch.empty((self.n_subnets))
+        outputs = []
         for i, subnet in enumerate(self.subnets):
             output = subnet(inputs[i])
-            outputs[i] = output
-        return torch.sum(outputs)
+            outputs.append(output)
+        outputs = torch.cat(outputs, dim =1)
+        # print(outputs.size())
+        return torch.sum(outputs, dim = 1)
     
     def prepare_inputs(self, output_lagged: torch.Tensor, inputs_lagged: list[torch.Tensor]):
         inputlist = inputs_lagged
         inputlist.append(output_lagged)
-        flipped = [tensor.flip(dims = [0]).squeeze() for tensor in inputlist]
+    #  '   print(inputlist)
+    #     print("x")'
+        flipped = [tensor.flip(dims = [0]) for tensor in inputlist]
         # print(flipped[0].size())
         inputs = []
-        for i in range(max([tensor.size(dim=0) for tensor in flipped])):
+        for i in range(max([tensor.size(dim=1) for tensor in flipped])):
             # print([tensor[i] for tensor in flipped if i<tensor.size(dim=0)])
-            input = torch.Tensor([tensor[i] for tensor in flipped if i<tensor.size(dim=0)])
+            input = torch.cat([tensor[:,i].unsqueeze(dim=1) for tensor in flipped if i<tensor.size(dim=1)], dim=1)
             inputs.append(input)
         return inputs
 
