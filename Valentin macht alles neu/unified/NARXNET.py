@@ -1,7 +1,15 @@
 import torch
 import torch.nn as nn
 from utilities import lag_matrix
+"""Was das neues kann
 
+    * Gemeinsame Architektur für NARX und ANARX
+    * Closed Loop Vorhersage
+    * Verschiedene Hyperparameter Modellvarianten(Layers, Lags, activation functions etc) ohne Änderung der Klasse konfigurierbar
+    * MISO Systeme, mit beliebiger Anzahl Inputs und Outputs
+    * Training als Open Loop und Closed Loop und Mischformen möglich
+    
+    """
 
 class NARXNET(nn.Module):
     def __init__(self, output_lags: int, input_lags: list[int]):
@@ -58,7 +66,7 @@ class NARXNET(nn.Module):
             state[0] = y_hat[i]
         return y_hat
 
-    def forecast(self, u: list[torch.Tensor], state=None):
+    def justpredict(self, u: list[torch.Tensor], state=None):
         """Perform closed loop prediction without calculating gradients.
         This is used for validation and plotting purposes
 
