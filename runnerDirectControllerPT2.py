@@ -64,4 +64,4 @@ if __name__ == "__main__":
     DirectControllerSim(log=True).eval(model, folder_name=RUN_NAME)
     # #
     # # # save model if you want to
-    model.save(f"eval\\{RUN_NAME}\\model")
+    model.save(f"{RUN_NAME}\\model")
