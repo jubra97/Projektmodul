@@ -14,7 +14,7 @@ class DirectControllerSim(DirectController):
                  output_freq=100,
                  sensor_freq=4000,
                  obs_config=None,
-                 reward_function="discrete",
+                 reward_function="discrete_u_pen_dep_on_error",
                  observation_function="error_with_vel",
                  oscillation_pen_gain=0.01,
                  oscillation_pen_fun=np.sqrt,
@@ -115,8 +115,8 @@ class DirectControllerSim(DirectController):
         self.update_simulation(system_input_trajectory)
 
         if self.log:
-            self.episode_log["action"]["value"].append(action[0])
-            self.episode_log["action"]["change"].append(action[0] - self.last_u[-1])
+            self.episode_log["action"]["value"].append(new_action)
+            self.episode_log["action"]["change"].append(action[0])
 
         if self.sim.done:
             done = True
