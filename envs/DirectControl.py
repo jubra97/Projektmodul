@@ -16,7 +16,7 @@ class DirectController(gym.Env, abc.ABC):
                  output_freq=100,
                  sensor_freq=4000,
                  obs_config=None,
-                 reward_function="discrete",
+                 reward_function="discrete_u_pen_dep_on_error",
                  observation_function="error_with_vel",
                  oscillation_pen_gain=0.01,
                  oscillation_pen_fun=np.sqrt,
@@ -31,7 +31,7 @@ class DirectController(gym.Env, abc.ABC):
         # set reward function
         if reward_function == "discrete":
             self.reward_function = self._create_reward_discrete2
-        if reward_function == "discrete_u_pen_dep_on_error":
+        elif reward_function == "discrete_u_pen_dep_on_error":
             self.reward_function = self._create_reward_discrete
         elif reward_function == "normal":
             self.reward_function = self._create_reward
@@ -202,7 +202,7 @@ class DirectController(gym.Env, abc.ABC):
         error_smooth[-2] = np.mean(errors[-20:-10])
 
         output_smooth = np.mean(system_outputs[-10:])
-        input_smooth = np.mean(system_outputs[-10:])
+        input_smooth = np.mean(system_inputs[-10:])
 
         self.integrated_error += error_smooth[-1] * 1 / self.measurements_per_output_update
 
@@ -369,7 +369,7 @@ class DirectController(gym.Env, abc.ABC):
             pen_error = abs(e)
 
         if self.oscillation_pen_fun:
-            pen_action = self.oscillation_pen_fun(action_change) * 5
+            pen_action = self.oscillation_pen_fun(abs(action_change)) * 5
         else:
             pen_action = abs(action_change) * self.oscillation_pen_gain
 
@@ -518,7 +518,7 @@ class DirectController(gym.Env, abc.ABC):
                 rmse_episode = np.sqrt(np.square(np.array(self.w) - np_sim_out))
                 rmse.append(rmse_episode)
 
-                if slope == 0:
+                if slope == 0 and step != 0:
                     # calculate rise time from 0.1 to 0.9 of step
                     rise_start = 0.1 * step
                     rise_stop = 0.9 * step
