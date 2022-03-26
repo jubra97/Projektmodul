@@ -16,14 +16,15 @@ print(Path.cwd())
 
 def main():
     config = dict(
-        epochs=1000,
+        epochs=10,
+        epochs_cl = 10,
         n_hidden = 3,
         layersize = 10,
-        afunc = "relu",
+        afunc = "tanh",
         bias = True, 
-        y_lags = 10,
-        u1_lags = 1,
-        u2_lags = 1,
+        y_lags = 15,
+        u1_lags = 10,
+        u2_lags = 10,
         batch_size=100,
         learning_rate=1e-3,
         architecture="ANARX")
@@ -32,8 +33,6 @@ def main():
 
 
 
-    
-
 
 
 def model_pipeline(hyperparameters):
@@ -41,15 +40,17 @@ def model_pipeline(hyperparameters):
     # tell wandb to get started
     with wandb.init(project="pytorch-demo", config=hyperparameters):
       # access all HPs through wandb.config, so logging matches execution!
-      config = wandb.config
+        config = wandb.config
 
       # make the model, data, and optimization problem
-      model, train_loader, train_data, valid_data, criterion, optimizer = make(config)
-      print(model)
+        model, train_loader, train_data, valid_data, criterion, optimizer = make(config)
+        torch.save(model, 'model.pt')
+        print(model)
 
       # and use them to train the model
-      train(model, train_loader, train_data, valid_data, criterion, optimizer, config)
+        train(model, train_loader, train_data, valid_data, criterion, optimizer, config)
 
+    
 
     return model
 
@@ -101,6 +102,27 @@ def train(model, loader, train_data, valid_data, criterion, optimizer, config):
             train_log(epoch, loss)
         if (epoch % 100 == 0):
             log_closed_loop_loss(epoch, model, criterion, valid_data, train_data)
+    for epoch_cl in tqdm(range(config.epochs_cl)):
+        log_epoch = epoch_cl+config.epochs+1
+        prediction = model.predict([train_data[0], train_data[1]])
+        loss = criterion(prediction, train_data[2])
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        if(epoch_cl % 10 == 0):
+            prediction_valid = model.justpredict([valid_data[0], valid_data[1]])
+            cl_valid_loss = criterion(prediction_valid, valid_data[2])
+            wandb.log({"epoch":log_epoch, "cl_valid_loss": cl_valid_loss, "cl_train_loss": loss}, step=log_epoch)
+            plt.plot(prediction_valid)
+            plt.plot(valid_data[2])
+            plt.ylabel("Model Prediction vs Output on Valid Data")
+            wandb.log({"Valid Chart": plt})
+            plt.plot(prediction.detach().numpy())
+            plt.plot(train_data[2])
+            plt.ylabel("Model Prediction vs Output on Train Data")
+            wandb.log({"Train Chart": plt})
+        else:
+            wandb.log({"epoch": log_epoch, "cl_valid_loss": cl_valid_loss, "cl_train_loss": loss}, step=log_epoch)
 
 
 def train_batch(u1_l, u2_l, y_l, y, model, optimizer, criterion):
