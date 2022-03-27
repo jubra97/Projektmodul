@@ -17,6 +17,7 @@ class CustomActor(Actor):
         layer_width = kwargs.pop("layer_width")
         activation_fun = kwargs.pop("activation_fun")
         end_activation_fun = kwargs.pop("end_activation_fun")
+        bias = kwargs.pop("bias")
         super(CustomActor, self).__init__(*args, **kwargs)
         # Define custom network with Dropout
         # WARNING: it must end with a tanh activation to squash the output
@@ -24,15 +25,15 @@ class CustomActor(Actor):
 
         net_dict = []
         if layers > 0:
-            net_dict.append(nn.Linear(self.features_dim, layer_width, bias=False))
+            net_dict.append(nn.Linear(self.features_dim, layer_width, bias=bias))
             net_dict.append(activation_fun)
             for _ in range(layers-1):
-                net_dict.append(nn.Linear(layer_width, layer_width, bias=False))
+                net_dict.append(nn.Linear(layer_width, layer_width, bias=bias))
                 net_dict.append(activation_fun)
-            net_dict.append(nn.Linear(layer_width, action_dim, bias=False))
+            net_dict.append(nn.Linear(layer_width, action_dim, bias=bias))
             net_dict.append(end_activation_fun)
         else:
-            net_dict.append(nn.Linear(self.features_dim, action_dim, bias=False))
+            net_dict.append(nn.Linear(self.features_dim, action_dim, bias=bias))
             net_dict.append(end_activation_fun)
 
         self.mu = nn.Sequential(*net_dict)
@@ -117,21 +118,21 @@ class CustomContinuousCritic(BaseModel):
 
 class CustomTD3Policy(TD3Policy):
     def __init__(self, *args, **kwargs):
-        actor_layers = kwargs.pop("actor_layers", 0)
-        actor_layer_width = kwargs.pop("actor_layer_width", 5)
-        actor_activation_fun = kwargs.pop("actor_activation_fun", nn.Tanh())
+        actor_layers = kwargs.pop("actor_layers", 2)
+        actor_layer_width = kwargs.pop("actor_layer_width", 10)
+        actor_activation_fun = kwargs.pop("actor_activation_fun", nn.ReLU())
         actor_end_activation_fun = kwargs.pop("actor_end_activation_fun", nn.Hardtanh())
-
+        actor_bias = kwargs.pop("bias", False)
         self.custom_actor_kwargs = {"layers": actor_layers,
                                     "layer_width": actor_layer_width,
                                     "activation_fun": actor_activation_fun,
-                                    "end_activation_fun": actor_end_activation_fun}
+                                    "end_activation_fun": actor_end_activation_fun,
+                                    "bias": actor_bias}
         
         critic_layers = kwargs.pop("critic_layers", 2)
         critic_layer_width = kwargs.pop("critic_layer_width", 200)
         critic_activation_fun = kwargs.pop("critic_activation_fun", nn.Tanh())
         critic_bias = kwargs.pop("critic_bias", True)
-
         self.custom_critic_kwargs = {"layers": critic_layers,
                                      "layer_width": critic_layer_width,
                                      "activation_fun": critic_activation_fun,
