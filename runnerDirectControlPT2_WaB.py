@@ -12,7 +12,7 @@ from wandb.integration.sb3 import WandbCallback
 
 from CustomEvalCallback import CustomEvalCallback
 from envs.DirectControllerSim import DirectControllerSim
-import custom_policy_no_bias
+import custom_policy
 from torch import nn
 
 if __name__ == "__main__":

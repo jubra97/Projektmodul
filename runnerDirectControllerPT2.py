@@ -11,7 +11,7 @@ from stable_baselines3.ddpg.policies import MlpPolicy
 
 from CustomEvalCallback import CustomEvalCallback
 from envs.DirectControllerSim import DirectControllerSim
-import custom_policy_no_bias
+import custom_policy
 
 actor_net = [5, 5]
 critic_net = [200, 200]

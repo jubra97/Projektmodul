@@ -11,7 +11,7 @@ from stable_baselines3.common.env_util import make_vec_env
 import torch as th
 from envs.DirectControllerOnlineConnection import DirectControllerOnlineConnection
 from envs.DirectControllerOnline import DirectControllerOnline
-import custom_policy_no_bias
+import custom_policy
 
 def linear_schedule(initial_value: float=1e-3) -> Callable[[float], float]:
     """

@@ -10,7 +10,7 @@ from stable_baselines3.ddpg.policies import MlpPolicy
 
 from CustomEvalCallback import CustomEvalCallback
 from envs.ControllerParamsSim import ControllerParamsSim
-import custom_policy_no_bias
+import custom_policy
 import os
 
 actor_net = [20, 20]

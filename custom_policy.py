@@ -116,13 +116,20 @@ class CustomContinuousCritic(BaseModel):
         return self.q_networks[0](th.cat([features, actions], dim=1))
 
 
-class CustomTD3Policy(TD3Policy):
+class CustomDDPGPolicy(TD3Policy):
     def __init__(self, *args, **kwargs):
+        """
+        Custom policy with variable actor and critic nets. Mainly needed to turn biases on and off.
+        For more information on building custom policies:
+         https://github.com/DLR-RM/stable-baselines3/issues/425#issuecomment-838226386.
+        :param args:
+        :param kwargs:
+        """
         actor_layers = kwargs.pop("actor_layers", 2)
         actor_layer_width = kwargs.pop("actor_layer_width", 10)
         actor_activation_fun = kwargs.pop("actor_activation_fun", nn.ReLU())
         actor_end_activation_fun = kwargs.pop("actor_end_activation_fun", nn.Hardtanh())
-        actor_bias = kwargs.pop("bias", False)
+        actor_bias = kwargs.pop("actor_bias", False)
         self.custom_actor_kwargs = {"layers": actor_layers,
                                     "layer_width": actor_layer_width,
                                     "activation_fun": actor_activation_fun,
@@ -137,7 +144,7 @@ class CustomTD3Policy(TD3Policy):
                                      "layer_width": critic_layer_width,
                                      "activation_fun": critic_activation_fun,
                                      "bias": critic_bias}
-        super(CustomTD3Policy, self).__init__(*args, **kwargs)
+        super(CustomDDPGPolicy, self).__init__(*args, **kwargs)
 
     def make_actor(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> CustomActor:
         actor_kwargs = self._update_features_extractor(self.actor_kwargs, features_extractor)
@@ -148,6 +155,3 @@ class CustomTD3Policy(TD3Policy):
         critic_kwargs = self._update_features_extractor(self.critic_kwargs, features_extractor)
         critic_kwargs["critic_net_props"] = self.custom_critic_kwargs
         return CustomContinuousCritic(**critic_kwargs).to(self.device)
-
-
-register_policy("CustomTD3Policy", CustomTD3Policy)
