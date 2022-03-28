@@ -1,10 +1,9 @@
-import json
-import pathlib
 import abc
+import itertools
 from collections import deque
 
 import gym
-import matplotlib.pyplot as plt
+
 import numpy as np
 from scipy.fft import fft, fftfreq
 
@@ -15,59 +14,60 @@ class DirectController(gym.Env, abc.ABC):
                  log=False,
                  output_freq=100,
                  sensor_freq=4000,
-                 obs_config=None,
-                 reward_function="discrete_u_pen_dep_on_error",
-                 observation_function="error_with_vel",
-                 oscillation_pen_gain=0.01,
-                 oscillation_pen_fun=np.sqrt,
-                 error_pen_fun=None
+                 reward_kwargs=None,
+                 observation_kwargs=None,
                  ):
         """
-        Create a gym environment to directly control the actuating value (u) of a system.
+        Create a gym environment that is designed to directly control the actuating value (u) of a system. It is a
+        abstract class that hols the reward and observation functions for the simulation and online implementations. It
+        also hols variables for logging.
         :param log: Log the simulation outcomes.
+        :param output_freq: Frequency for u update.
+        :param sensor_freq: Frequency of new sensor update data.
+        :param reward_kwargs: Dict with extra options for the reward function
+        :param observation_kwargs: Dict with extra option for the observation function
         """
         super(DirectController, self).__init__()
 
+        self.reward_kwargs = reward_kwargs if reward_kwargs else {}
+        self.observation_kwargs = observation_kwargs if observation_kwargs else {}
+
         # set reward function
-        if reward_function == "discrete":
-            self.reward_function = self._create_reward_discrete2
-        elif reward_function == "discrete_u_pen_dep_on_error":
-            self.reward_function = self._create_reward_discrete
-        elif reward_function == "normal":
+        reward_function = reward_kwargs.get("function", "normal")
+        if reward_function == "normal":
             self.reward_function = self._create_reward
+        elif reward_function == "custom":
+            print("add your own reward function")
         else:
             raise ValueError(
                 "No corresponding reward function could be found. If you want to add your own reward function add the"
                 " function to this if else block.")
 
         # set observation function
-        if observation_function == "obs_with_vel":
-            self.observation_function = self._create_obs_with_vel
-        elif observation_function == "last_states":
-            self.observation_function = self._create_obs_last_states
+        observation_function = observation_kwargs.get("function", "error_with_vel")
+        if observation_function == "raw_with_vel":
+            self.observation_function = self._obs_raw_with_vel
+        elif observation_function == "raw_with_last_states":
+            self.observation_function = self._obs_raw_with_last_states
         elif observation_function == "error_with_vel":
-            self.observation_function = self._create_obs_errors_with_vel
-        elif observation_function == "last_errors":
-            self.observation_function = self._create_obs_last_errors
+            self.observation_function = self._obs_errors_with_vel
+        elif observation_function == "error_with_last_states":
+            self.observation_function = self._obs_errors_with_last_states
+        elif observation_function == "error_with_extra_components":
+            self.observation_function = self._obs_error_with_custom_extra_data
         else:
             raise ValueError(
                 "No corresponding observation function could be found. If you want to add your own observation"
                 "function add the function to this if else block.")
 
-        # self.oscillation_pen_gain_raising = np.linspace(0, 20, 670)
-        self.oscillation_pen_gain = oscillation_pen_gain
-        self.oscillation_pen_fun = oscillation_pen_fun
-        self.error_pen_fun = error_pen_fun
-
         self.sensor_freq = sensor_freq  # Hz
         self.output_freq = output_freq  # Hz
         assert sensor_freq % output_freq == 0, "sensor_freq must be a multiple ot output_freq!"
         self.measurements_per_output_update = int(sensor_freq / output_freq)
-        self.nbr_measurements_to_keep = self.measurements_per_output_update * 2
-        self.obs_config = obs_config
 
         # create fifo lists for latest measurement points, new data is inserted from the right side. Because of this the
-        # most recent value is the in e.g. self.last_y[-1].
+        # most recent system output value is in self.last_y[-1].
+        self.nbr_measurements_to_keep = self.measurements_per_output_update * 2
         self.last_u = deque([0] * self.nbr_measurements_to_keep, maxlen=self.nbr_measurements_to_keep)
         self.last_y = deque([0] * self.nbr_measurements_to_keep, maxlen=self.nbr_measurements_to_keep)
         self.last_w = deque([0] * self.nbr_measurements_to_keep, maxlen=self.nbr_measurements_to_keep)
@@ -97,11 +97,8 @@ class DirectController(gym.Env, abc.ABC):
 
     def reset(self, *args, **kwargs):
         """
-        Reset the environment. Called before every start of a new episode. If no custom reference value (custom_w) is
-        given a ramp (or step) is used.
-        :param step_height: Height of step/ramp.
-        :param step_slope: Slope of Step. If slope is 0 a step is generated.
-        :param custom_w:
+        Reset the environment. Called before every start of a new episode. Calls custom_reset that must be implemented
+        in a concrete implementation of this class. Resets logging for one episode.
         :return:
         """
 
@@ -114,7 +111,7 @@ class DirectController(gym.Env, abc.ABC):
             self.episode_log["obs"]["last_set_points"] = []
             self.episode_log["obs"]["last_system_inputs"] = []
             self.episode_log["obs"]["last_system_outputs"] = []
-            self.episode_log["obs"]["errors"] = []
+            self.episode_log["obs"]["last_errors"] = []
             self.episode_log["obs"]["error"] = []
             self.episode_log["obs"]["error_vel"] = []
             self.episode_log["obs"]["set_point"] = []
@@ -122,7 +119,7 @@ class DirectController(gym.Env, abc.ABC):
             self.episode_log["obs"]["system_output"] = []
             self.episode_log["obs"]["set_point_vel"] = []
             self.episode_log["obs"]["input_vel"] = []
-            self.episode_log["obs"]["outputs_vel"] = []
+            self.episode_log["obs"]["output_vel"] = []
             self.episode_log["obs"]["error_integrated"] = []
             self.episode_log["rewards"]["summed"] = []
             self.episode_log["rewards"]["pen_error"] = []
@@ -139,26 +136,42 @@ class DirectController(gym.Env, abc.ABC):
 
     @abc.abstractmethod
     def custom_reset(self, *args, **kwargs):
+        """
+        Reset env.
+        :param args:
+        :param kwargs:
+        :return:
+        """
         raise NotImplementedError()
 
-    def sensor_data_processing(self):
-        pass
-
-    def _create_obs_with_vel(self):
+    def _obs_raw_with_vel(self):
         """
         Create observation consisting of: set point (w), system output (y), system input (u) and their derivations.
-        :param first: True if first call in an episode (normally in reset()).
-        :return:
+        Add a "average_length" field to observation_kwargs to generate a observation with averaged sensor data.
+        :return: Observation
         """
         set_points = np.array(list(self.last_w))
         system_outputs = np.array(list(self.last_y))
         system_inputs = np.array(list(self.last_u))
+        average_length = self.observation_kwargs.get("average_length", 1)
 
-        outputs_vel = (system_outputs[-2] - system_outputs[-1]) * 1 / self.measurements_per_output_update
-        input_vel = (system_inputs[-3] - system_inputs[-1]) * 1 / self.measurements_per_output_update
-        set_point_vel = (set_points[-2] - set_points[-1]) * 1 / self.measurements_per_output_update
+        set_point = np.mean(set_points[-average_length:])
+        last_set_point = np.mean(set_points[-average_length * 2:-average_length])
+        set_point_vel = (set_point - last_set_point) * (average_length / self.sensor_freq)
 
-        obs = [set_points[-1], system_inputs[-1], system_outputs[-1], set_point_vel, input_vel, outputs_vel]
+        system_output = np.mean(system_outputs[-average_length:])
+        last_system_output = np.mean(system_outputs[-average_length * 2:-average_length])
+        system_output_vel = (system_output - last_system_output) * (average_length / self.sensor_freq)
+
+        # ensure that a change in u was made to calculate input velocity
+        if average_length < self.measurements_per_output_update:
+            system_input_vel = (system_inputs[-(self.measurements_per_output_update + 1)] - system_inputs[-1]) * 1 / self.measurements_per_output_update
+        else:
+            system_input = np.mean(system_inputs[-average_length:])
+            last_system_input = np.mean(system_inputs[-average_length * 2:-average_length])
+            system_input_vel = (system_input - last_system_input) * (average_length / self.sensor_freq)
+
+        obs = [set_point, system_input, system_output, set_point_vel, system_input_vel, system_output_vel]
 
         if self.log:
             self.episode_log["obs"]["set_point"].append(obs[0])
@@ -166,236 +179,209 @@ class DirectController(gym.Env, abc.ABC):
             self.episode_log["obs"]["system_output"].append(obs[2])
             self.episode_log["obs"]["set_point_vel"].append(obs[3])
             self.episode_log["obs"]["input_vel"].append(obs[4])
-            self.episode_log["obs"]["outputs_vel"].append(obs[5])
+            self.episode_log["obs"]["output_vel"].append(obs[5])
 
         return np.array(obs)
 
-    def _create_obs_last_states(self):
+    def _obs_raw_with_last_states(self):
         """
-        Create observation consisting of: last 3 set points (w), last 3 system outputs (y), last 3 system inputs (u).
-        :param first: True if first call in an episode (normally in reset()).
-        :return:
+        Create observation consisting of: last set points (w), last system outputs (y), last system inputs (u).
+        Add a "history_length" filed to observation_kwargs to determine how many of last states should be added.
+        :return: Observation
         """
+        history_length = self.observation_kwargs.get("history_length", 3)
 
-        obs = list(self.last_w) + list(self.last_u) + list(self.last_y)
+        # deque does not support slicing so a little workaround is needed, get newest "history_length" states
+        w_history = list(itertools.islice(self.last_w, len(self.last_w) - history_length, len(self.last_w)))
+        u_history = list(itertools.islice(self.last_u, len(self.last_u) - history_length, len(self.last_u)))
+        y_history = list(itertools.islice(self.last_y, len(self.last_y) - history_length, len(self.last_y)))
+
+        obs = w_history + u_history + y_history
 
         if self.log:
-            self.episode_log["obs"]["last_set_points"].append(list(obs[0:3]))
-            self.episode_log["obs"]["last_system_inputs"].append(list(obs[3:6]))
-            self.episode_log["obs"]["last_system_outputs"].append(list(obs[6:9]))
+            self.episode_log["obs"]["last_set_points"].append(list(obs[0:history_length]))
+            self.episode_log["obs"]["last_system_inputs"].append(list(obs[history_length:history_length * 2]))
+            self.episode_log["obs"]["last_system_outputs"].append(list(obs[history_length * 2:history_length * 3]))
 
         return np.array(obs)
 
-    def _create_obs_errors_with_vel(self):
+    def _obs_errors_with_vel(self):
         """
         Create observation consisting of: system error (e), system input (u) and their derivations.
-        :param first: True if first call in an episode (normally in reset()).
         :return:
         """
         set_points = np.array(list(self.last_w))
         system_outputs = np.array(list(self.last_y))
         system_inputs = np.array(list(self.last_u))
-        errors = (set_points - system_outputs).tolist()
+        errors = set_points - system_outputs
+        average_length = self.observation_kwargs.get("average_length", 1)
 
-        error_smooth = [0, 0]
-        error_smooth[-1] = np.mean(errors[-10:])
-        error_smooth[-2] = np.mean(errors[-20:-10])
+        error = np.mean(errors[-average_length:])
+        error_last = np.mean(errors[-average_length * 2:-average_length])
+        error_vel = (error - error_last) * (average_length / self.sensor_freq)
 
-        output_smooth = np.mean(system_outputs[-10:])
-        input_smooth = np.mean(system_inputs[-10:])
+        # ensure that a change in u was made to calculate input velocity
+        if average_length < self.measurements_per_output_update:
+            system_input_vel = (system_inputs[-(self.measurements_per_output_update + 1)] - system_inputs[-1])\
+                               * 1 / self.measurements_per_output_update
+        else:
+            system_input = np.mean(system_inputs[-average_length:])
+            system_input_last = np.mean(system_inputs[-average_length * 2:-average_length])
+            system_input_vel = (system_input - system_input_last) * (average_length / self.sensor_freq)
 
-        self.integrated_error += error_smooth[-1] * 1 / self.measurements_per_output_update
+        obs = [error, error_vel, system_input_vel]
 
-        error_vel = (error_smooth[-2] - error_smooth[-1]) * 1 /self.measurements_per_output_update
-        input_vel = (system_inputs[-(self.measurements_per_output_update + 1)] - system_inputs[-1]) * 1 / self.measurements_per_output_update
-        output_vel = (system_outputs[-(self.measurements_per_output_update + 1)] - system_outputs[-1]) * 1 / self.measurements_per_output_update
-
-        obs = [error_smooth[-1]]
         if self.log:
-            self.episode_log["obs"]["error"].append(obs[-1])
-        if self.obs_config["i"]:
-            obs.append(self.integrated_error)
-            if self.log:
-                self.episode_log["obs"]["error_integrated"].append(obs[-1])
-        if self.obs_config["d"]:
-            obs.append(error_vel * 10)
-            if self.log:
-                self.episode_log["obs"]["error_vel"].append(obs[-1])
-        if self.obs_config["input_vel"]:
-            obs.append(input_vel * 10)
-            if self.log:
-                self.episode_log["obs"]["input_vel"].append(obs[-1])
-        if self.obs_config["output_vel"]:
-            obs.append(output_vel * 10)
-            if self.log:
-                self.episode_log["obs"]["outputs_vel"].append(obs[-1])
-        if self.obs_config["output"]:
-            obs.append(output_smooth)
-            if self.log:
-                self.episode_log["obs"]["system_output"].append(obs[-1])
-        if self.obs_config["input"]:
-            obs.append(input_smooth)
-            if self.log:
-                self.episode_log["obs"]["system_input"].append(obs[-1])
-
-        # old_obs = self._create_obs_with_vel()
-
-        # obs = [error_smooth[-1],  error_vel * 10, self.integrated_error, input_vel*10]
-        # # obs = old_obs.tolist() + [error_smooth[-1], system_inputs[-1], error_vel, input_vel]
-        # # obs = [error_smooth[-1], error_vel]
-        #
-        # if self.log:
-        #     self.episode_log["obs"]["error"].append(obs[0])
-        #     # self.episode_log["obs"]["system_input"].append(obs[3])
-        #     self.episode_log["obs"]["error_vel"].append(obs[1])
-        #     self.episode_log["obs"]["input_vel"].append(obs[3])
-        #     self.episode_log["obs"]["error_integrated"].append(obs[2])
-        #     # self.episode_log["obs"]["system_output"].append(obs[4])
+            self.episode_log["obs"]["error"].append(obs[0])
+            self.episode_log["obs"]["error_vel"].append(obs[1])
+            self.episode_log["obs"]["input_vel"].append(obs[2])
         return np.array(obs)
 
-    def _create_obs_last_errors(self):
+    def _obs_errors_with_last_states(self):
         """
-        Create observation consisting of: last 3 system errors (e), last 3 system inputs (u).
-        :param first: True if first call in an episode (normally in reset()).
-        :return:
+        Create observation consisting of: last system errors (e), last system inputs (u).
+        Add a "history_length" filed to observation_kwargs to determine how many of last states should be added.
+        :return: Observation
         """
+        history_length = self.observation_kwargs.get("history_length", 3)
+
         set_points = np.array(list(self.last_w))
         system_outputs = np.array(list(self.last_y))
         errors = (set_points - system_outputs).tolist()
 
-        obs = errors + list(self.last_u)
+        obs = errors[-history_length:]
 
         if self.log:
-            self.episode_log["obs"]["errors"].append(obs[0:3])
-            self.episode_log["obs"]["last_system_inputs"].append(obs[3:6])
+            self.episode_log["obs"]["last_errors"].append(obs[0:history_length])
+
+        return np.array(obs)
+
+    def _obs_error_with_custom_extra_data(self):
+        """
+        Create observation consisting of: system error (e) and configurable extra observations. Define in a dict named
+        "obs_config" in observation_kwargs. Mainly used for testing.
+        :return: Observation
+        """
+        set_points = np.array(list(self.last_w))
+        system_outputs = np.array(list(self.last_y))
+        system_inputs = np.array(list(self.last_u))
+        errors = set_points - system_outputs
+        average_length = self.observation_kwargs.get("average_length", 1)
+
+        error = np.mean(errors[-average_length:])
+        error_last = np.mean(errors[-average_length * 2:-average_length])
+        error_vel = (error - error_last) * (average_length / self.sensor_freq)
+        self.integrated_error = error * 1 / self.output_freq
+
+        system_input = np.mean(system_inputs[-average_length:])
+        system_input_last = np.mean(system_inputs[-average_length * 2:-average_length])
+        system_input_vel = (system_input - system_input_last) * (average_length / self.sensor_freq)
+
+        system_output = np.mean(system_outputs[-average_length:])
+        system_output_last = np.mean(system_outputs[-average_length * 2:-average_length])
+        system_output_vel = (system_output - system_output_last) * (average_length / self.sensor_freq)
+
+        obs_config = self.observation_kwargs.get("obs_config", {})
+        obs = [error]
+        if self.log:
+            self.episode_log["obs"]["error"].append(obs[-1])
+        if obs_config["i"]:
+            obs.append(self.integrated_error)
+            if self.log:
+                self.episode_log["obs"]["error_integrated"].append(obs[-1])
+        if obs_config["d"]:
+            obs.append(error_vel)
+            if self.log:
+                self.episode_log["obs"]["error_vel"].append(obs[-1])
+        if obs_config["input_vel"]:
+            obs.append(system_input_vel)
+            if self.log:
+                self.episode_log["obs"]["input_vel"].append(obs[-1])
+        if obs_config["output_vel"]:
+            obs.append(system_output_vel)
+            if self.log:
+                self.episode_log["obs"]["outputs_vel"].append(obs[-1])
+        if obs_config["output"]:
+            obs.append(system_output)
+            if self.log:
+                self.episode_log["obs"]["system_output"].append(obs[-1])
+        if obs_config["input"]:
+            obs.append(system_input)
+            if self.log:
+                self.episode_log["obs"]["system_input"].append(obs[-1])
 
         return np.array(obs)
 
     def _create_reward(self):
         """
-        Create reward as a combination of the current error e between y and w and the change of of the action (to
+        Create reward as a combination of the current error e between y and w and the change of of the action (to reach
         smaller the oscillation in u).
+        The Reward function is customizable the different keyword in the reward_kwargs:
+        discrete_bonus: Add a discrete bonus if e is small, helps to achieve more precise final value
+        error_pen_fun: Use a function to calculate the penalty generated by e. E.g np.sqrt, or np.square
+        oscillation_pen_fun: Use a function to calculate the penalty generated by input change. E.g np.sqrt, or np.square
+        oscillation_pen_gain: Weight between error_pen (1) and input_oscillation_pen (weight)
+        oscillation_pen_dependent_on_error: weight input_oscillation_pen with 1/e; by this oscillation is higher
+                                            penalized if the error is small
         :return: reward
         """
-        # get latest system attributes and calculate error/ integrated error
+        error_pen_fun = self.reward_kwargs.get("error_pen_fun", None)
+        oscillation_pen_fun = self.reward_kwargs.get("oscillation_pen_fun", np.sqrt)
+        oscillation_pen_gain = self.reward_kwargs.get("oscillation_pen_gain", 1)
+        add_discrete_bonus = self.reward_kwargs.get("discrete_bonus", True)
+        oscillation_pen_dependent_on_error = self.reward_kwargs.get("oscillation_pen_dependent_on_error", False)
+
+        # calculate mean error since last output update step
         y = np.array(list(self.last_y)[-self.measurements_per_output_update:])
         w = np.array(list(self.last_w)[-self.measurements_per_output_update:])
         e = np.mean(w - y)
 
-        # calculate action change
-        action_change = (self.last_u[-(self.measurements_per_output_update + 1)]
-                         - self.last_u[-self.measurements_per_output_update]) \
-                         * (1 / self.measurements_per_output_update)
-
-        pen_error = np.square(e)
-        pen_action = np.square(action_change) * 0.01
-        # pen_integrated = np.square(self.integrated_error) * 0
-
-        reward = 0
-        reward -= pen_error
-        reward -= pen_action
-
-        if self.log:
-            self.episode_log["rewards"]["summed"].append(reward)
-            self.episode_log["rewards"]["pen_error"].append(-pen_error)
-            self.episode_log["rewards"]["pen_action"].append(-pen_action)
-
-        return reward
-
-    def _create_reward_discrete(self):
-        # get latest system attributes and calculate error/ integrated error
-        y = np.array(list(self.last_y)[-self.measurements_per_output_update:])
-        w = np.array(list(self.last_w)[-self.measurements_per_output_update:])
-        e = np.mean(w - y)
-
-        # calculate action change
-        action_change = (self.last_u[-(self.measurements_per_output_update + 1)]
-                         - self.last_u[-self.measurements_per_output_update]) \
-                         * (1 / self.measurements_per_output_update)
-
-        abs_error = abs(e)
-
-        if self.error_pen_fun:
-            pen_error = self.error_pen_fun(abs(e))
-        else:
-            pen_error = abs(e)
-
-        if self.oscillation_pen_fun:
-            pen_action = self.oscillation_pen_fun(abs((1/pen_error) * action_change)) * self.oscillation_pen_gain
-        else:
-            pen_action = abs(action_change) * self.oscillation_pen_gain
-
-        reward = 0
-        if abs_error < 0.5:
-            reward += 1
-        if abs_error < 0.1:
-            reward += 2
-        if abs_error < 0.05:
-            reward += 3
-        if abs_error < 0.02:
-            reward += 4
-        if abs_error < 0.01:
-            reward += 5
-        if abs_error < 0.005:
-            reward += 10
-        if abs_error < 0.0005:
-            reward += 10
-
-        reward -= pen_error
-        reward -= pen_action
-
-        if self.log:
-            self.episode_log["rewards"]["summed"].append(reward)
-            self.episode_log["rewards"]["pen_action"].append(-pen_action)
-            self.episode_log["rewards"]["pen_error"].append(-pen_error)
-        return reward
-
-    def _create_reward_discrete2(self):
-        # get latest system attributes and calculate error/ integrated error
-        y = np.array(list(self.last_y)[-self.measurements_per_output_update:])
-        w = np.array(list(self.last_w)[-self.measurements_per_output_update:])
-        e = np.mean(w - y)
-
-        # calculate action change
+        # calculate difference between last action change
         action_change = (self.last_u[-(self.measurements_per_output_update + 1)]
                          - self.last_u[-self.measurements_per_output_update]) \
                         * (1 / self.measurements_per_output_update)
 
         abs_error = abs(e)
+        abs_action_change = abs(action_change)
 
-        if self.error_pen_fun:
-            pen_error = self.error_pen_fun(abs(e))
+        if error_pen_fun:
+            pen_error = error_pen_fun(abs_error)
         else:
-            pen_error = abs(e)
+            pen_error = abs_error
 
-        if self.oscillation_pen_fun:
-            pen_action = self.oscillation_pen_fun(abs(action_change)) * 5
+        if oscillation_pen_dependent_on_error:
+            abs_action_change = (1 / abs_error) * abs_action_change
+        if oscillation_pen_fun:
+            pen_action = oscillation_pen_fun(abs_action_change) * oscillation_pen_gain
         else:
-            pen_action = abs(action_change) * self.oscillation_pen_gain
+            pen_action = abs_action_change * oscillation_pen_gain
 
         reward = 0
-        if abs_error < 0.5:
-            reward += 1
-        if abs_error < 0.1:
-            reward += 2
-        if abs_error < 0.05:
-            reward += 3
-        if abs_error < 0.02:
-            reward += 4
-        if abs_error < 0.01:
-            reward += 5
-        if abs_error < 0.005:
-            reward += 10
-        if abs_error < 0.0005:
-            reward += 10
+
+        if add_discrete_bonus:
+            if abs_error < 0.5:
+                reward += 1
+            if abs_error < 0.1:
+                reward += 2
+            if abs_error < 0.05:
+                reward += 3
+            if abs_error < 0.02:
+                reward += 4
+            if abs_error < 0.01:
+                reward += 5
+            if abs_error < 0.005:
+                reward += 10
+            if abs_error < 0.0005:
+                reward += 10
 
         reward -= pen_error
         reward -= pen_action
 
         if self.log:
             self.episode_log["rewards"]["summed"].append(reward)
-            self.episode_log["rewards"]["pen_action"].append(-pen_action)
             self.episode_log["rewards"]["pen_error"].append(-pen_error)
+            self.episode_log["rewards"]["pen_action"].append(-pen_action)
+
         return reward
 
     @abc.abstractmethod
@@ -404,7 +390,7 @@ class DirectController(gym.Env, abc.ABC):
         Step the environment for one update step of the action. Collect sensor values of the simulation and compute
         reward and next observation from them.
         :param action: Next u for simulation.
-        :return:
+        :return: observation, reward, done, info
         """
         raise NotImplementedError()
 
@@ -418,7 +404,7 @@ class DirectController(gym.Env, abc.ABC):
 
     def eval_fft(self):
         """
-        Calculate fft of the action signal for one episode. Also compute the action smoothness value in
+        Calculate fft of the action signal for one episode. Also compute the action smoothness value as shown in
         https: // arxiv.org / pdf / 2012.06644.pdf.
         :return:
         """
@@ -434,127 +420,4 @@ class DirectController(gym.Env, abc.ABC):
         sm = (2 / actions_fftfreq.shape[0]) * np.sum(actions_fftfreq * 2 / N * np.abs(actions_fft[0:N // 2]))
         return actions_fft, actions_fftfreq, N, sm
 
-    def create_eval_plot(self):
-        """
-        Crate a plot for tensorboard while training and afterwards for evaluation.
-        :return:
-        """
-        fig, ax = plt.subplots(2, 3, figsize=(20, 12))
-        timestamps = np.linspace(0, self.last_t[-1], int(self.last_t[-1] * self.output_freq))
 
-        ax[0][0].set_title("Obs")
-        for key, value in self.episode_log["obs"].items():
-            if len(value) > 0:
-                ax[0][0].plot(timestamps, value[:-1], label=key)  # verschoben zum Reset; eine Obs mehr als Reward!
-        ax[0][0].grid()
-        ax[0][0].legend()
-
-        ax[1][0].set_title("Rewards")
-        for key, value in self.episode_log["rewards"].items():
-            if len(value) > 0:
-                ax[1][0].plot(timestamps, value, label=key)
-        ax[1][0].plot([0], [0], label=f"Sum: {np.sum(self.episode_log['rewards']['summed']):.2f}")
-        ax[1][0].grid()
-        ax[1][0].legend()
-
-        ax[0][1].set_title("Action")
-        for key, value in self.episode_log["action"].items():
-            if len(value) > 0:
-                ax[0][1].plot(timestamps, value, label=key)
-        ax[0][1].grid()
-        ax[0][1].legend()
-
-        ax[1][1].set_title("Function")
-        for key, value in self.episode_log["function"].items():
-            if len(value) > 0:
-                ax[1][1].plot(self.sim.t, value, label=key)
-        ax[1][1].grid()
-        ax[1][1].legend()
-
-        ax[1][2].set_title("FFT")
-        actions_fft, actions_fftfreq, N, sm = self.eval_fft()
-        ax[1][2].plot(actions_fftfreq, 2 / N * np.abs(actions_fft[0:N // 2]))
-        ax[1][2].text(0.5, 0.9, f"Smoothness: {sm}", transform=ax[1][2].transAxes)
-        ax[1][2].grid()
-
-        fig.tight_layout()
-        return fig, ax
-
-    def eval(self, model, folder_name):
-        """
-        Run an evaluation with different steps and ramps. Create a plot for every run and save it. Also save a json file
-        with some statistics of a run.
-        :param model: Model to be used for action prediction.
-        :param folder_name: Folder to save evaluation in.
-        """
-        steps = np.linspace(0, 0.5, 20)
-        slopes = np.linspace(0, 0.5, 3)
-        i = 1
-        pathlib.Path(f"{folder_name}").mkdir(exist_ok=True)
-        rewards = []
-        rmse = []
-        sms = []
-        rise_times = []
-        setting_times = []
-        extra_info = {}
-        for step in steps:
-            for slope in slopes:
-                # slope = slope * 0.1
-                actions = []
-                # create env
-                done = False
-                obs = self.reset(0, step, slope)
-                while not done:
-                    action, _ = model.predict(obs)
-                    obs, reward, done, info = self.step(action)
-                    rewards.append(reward)
-                    actions.append(action)
-                _, _, _, smoothness = self.eval_fft()
-                sms.append(smoothness)
-                fig, ax = self.create_eval_plot()
-
-                np_sim_out = np.array(self.sim._sim_out)
-
-                rmse_episode = np.sqrt(np.square(np.array(self.w) - np_sim_out))
-                rmse.append(rmse_episode)
-
-                if slope == 0 and step != 0:
-                    # calculate rise time from 0.1 to 0.9 of step
-                    rise_start = 0.1 * step
-                    rise_stop = 0.9 * step
-                    start_time = int(self.sim.model_freq * 0.5)
-                    index_start = np.argmax(np_sim_out[start_time:] > rise_start)
-                    index_end = np.argmax(np_sim_out[start_time:] > rise_stop)
-                    rise_time = (index_end - index_start) / self.sim.model_freq
-                    rise_times.append(rise_time)
-
-                    # calculate setting time with 5% band
-                    lower_bound = step - step * 0.05
-                    upper_bound = step + step * 0.05
-                    # go backwards through sim._sim_out and find first index out of bounds
-                    index_lower = np.argmax(np_sim_out[::-1] < lower_bound)
-                    index_upper = np.argmax(np_sim_out[::-1] > upper_bound)
-                    last_out_of_bounds = min([index_lower, index_upper])
-                    setting_time = (self.sim.n_sample_points - last_out_of_bounds - start_time) / self.sim.model_freq
-                    setting_times.append(setting_time)
-
-                    ax[0][2].text(0.1, 0.9, f"Rise Time: {rise_time}", transform=ax[0][2].transAxes)
-                    ax[0][2].text(0.1, 0.7, f"Setting Time: {setting_time}", transform=ax[0][2].transAxes)
-                ax[0][2].text(0.1, 0.5, f"Mean RMSE: {np.mean(rmse_episode)}", transform=ax[0][2].transAxes)
-                plt.savefig(f"{folder_name}\\{i}_{step}_{slope}.png")
-                plt.close()
-                i += 1
-
-        mean_episode_reward = np.sum(rewards) / self.n_episodes
-        extra_info["mean_episode_reward"] = mean_episode_reward
-        extra_info["rmse"] = np.mean(rmse)
-        extra_info["max_rmse"] = np.max(rmse)
-        extra_info["mean_rise_time"] = np.mean(rise_times)
-        extra_info["mean_setting_time"] = np.mean(setting_times)
-        extra_info["smoothness"] = np.mean(sms)
-
-        with open(f"{folder_name}\\extra_info.json", 'w+') as f:
-            json.dump(extra_info, f)
-        print(f"Eval Info: RMSE: {np.mean(rmse)} --- Smoothness: {np.mean(sms)}")
-
-        return extra_info
