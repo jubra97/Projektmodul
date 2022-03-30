@@ -26,7 +26,7 @@ reward_options = {
     "discrete_bonus": True,
     "oscillation_pen_dependent_on_error": True,
     "oscillation_pen_fun": np.sqrt,
-    "oscillation_pen_gain:": 0,
+    "oscillation_pen_gain:": 0.1,
     "error_pen_fun": None,
 }
 

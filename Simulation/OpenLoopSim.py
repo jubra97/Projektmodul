@@ -69,7 +69,7 @@ class OpenLoopSim:
 
     def sim_one_step(self, u, add_noise=True):
         """
-        Step trough simulation with given input.
+        Step trough simulation with given input for len(u) steps.
         :param u: Input for the simulation. Must be as long as the simulated timesteps.
         :param add_noise: Add noise to the output?
         :return:
@@ -77,6 +77,8 @@ class OpenLoopSim:
         start = self.current_simulation_step
         stop = self.current_simulation_step + self.model_steps_per_controller_update
         u_scaled = np.array(u) * self.action_scale
+
+        # simulate next steps
         if self.last_state is None:
             sim_time, out_step, self.last_state = control.forced_response(self.sys,
                                                                           self.t[start:stop + 1],
@@ -100,6 +102,7 @@ class OpenLoopSim:
         if add_noise:
             out_step = out_step + np.random.normal(0, 0.0005, size=out_step.shape[0])
 
+        # check if last sim step
         if stop == len(self.t):
             self._sim_out = self._sim_out + out_step.tolist()
             self._u = self._u + u
@@ -108,7 +111,7 @@ class OpenLoopSim:
             self._sim_out = self._sim_out + out_step.tolist()[:-1]
             self._u = self._u + u[:-1]
 
-
+        # get newest data and append to corresponding list, get newest data from end of list and revert than again
         new_y_sensor = self._sim_out[stop:start:-self.model_steps_per_senor_update][::-1]
         self.sensor_out = self.sensor_out + new_y_sensor
 

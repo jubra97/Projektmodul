@@ -40,9 +40,9 @@ class DirectControllerSim(DirectController):
         if sys:
             assert action_scale, "Add a action scale factor for your system. If no scaling should be done use 1."
         else:
-            sys = control.tf([3.55e3], [0.00003, 0.0014, 1])  # pt2 of dms
-            action_scale = 500
-            observation_scale = 3_000_000
+            sys = control.tf([3.452391113940120e+04], [1,46.629595161020170,3.495142304939126e+04])  # pt2 of dms
+            action_scale = 1
+            observation_scale = 1
         # create simulation object with an arbitrary tf.
         self.sim = OpenLoopSim(sys,
                                model_freq,
