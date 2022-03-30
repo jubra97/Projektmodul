@@ -33,7 +33,7 @@ class DirectController(gym.Env, abc.ABC):
         self.observation_kwargs = observation_kwargs if observation_kwargs else {}
 
         # set reward function
-        reward_function = reward_kwargs.get("function", "normal")
+        reward_function = self.reward_kwargs.get("function", "normal")
         if reward_function == "normal":
             self.reward_function = self._create_reward
         elif reward_function == "custom":
@@ -44,7 +44,7 @@ class DirectController(gym.Env, abc.ABC):
                 " function to this if else block.")
 
         # set observation function
-        observation_function = observation_kwargs.get("function", "error_with_vel")
+        observation_function = self.observation_kwargs.get("function", "error_with_vel")
         if observation_function == "raw_with_vel":
             self.observation_function = self._obs_raw_with_vel
         elif observation_function == "raw_with_last_states":
@@ -163,11 +163,11 @@ class DirectController(gym.Env, abc.ABC):
         last_system_output = np.mean(system_outputs[-average_length * 2:-average_length])
         system_output_vel = (system_output - last_system_output) * (average_length / self.sensor_freq)
 
+        system_input = np.mean(system_inputs[-average_length:])
         # ensure that a change in u was made to calculate input velocity
         if average_length < self.measurements_per_output_update:
             system_input_vel = (system_inputs[-(self.measurements_per_output_update + 1)] - system_inputs[-1]) * 1 / self.measurements_per_output_update
         else:
-            system_input = np.mean(system_inputs[-average_length:])
             last_system_input = np.mean(system_inputs[-average_length * 2:-average_length])
             system_input_vel = (system_input - last_system_input) * (average_length / self.sensor_freq)
 
