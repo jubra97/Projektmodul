@@ -1,10 +1,11 @@
+from numpy import identity
 import torch
 import torch.nn as nn
 from NARXNET import NARXNET
 
 
 class ANARX(NARXNET):
-    def __init__(self, output_lags: int, input_lags: list[int], n_hidden = 2, layersize = 10, afunc = torch.relu, bias = True):
+    def __init__(self, output_lags: int, input_lags: list[int], n_hidden = 2, layersize = 10, afunc = torch.relu, bias = True, SANARX = False):
         """_summary_
 
         Args:
@@ -27,6 +28,9 @@ class ANARX(NARXNET):
                     mask[j] = 1
             self.lag_map[i] = mask
         self.subnets = [LAGNET(sum(self.lag_map[i]), n_hidden, layersize, afunc, bias) for i in range(self.n_subnets)]
+        if SANARX:
+            id = identity
+            self.subnets[0] = LAGNET(sum(self.lag_map[0]), 1, sum(self.lag_map[0]), identity, bias)
         self.subnets = nn.ModuleList(self.subnets)
     
     def forward(self, output_lagged: torch.Tensor, inputs_lagged: list[torch.Tensor]):
@@ -45,22 +49,20 @@ class ANARX(NARXNET):
             output = subnet(inputs[i])
             outputs.append(output)
         outputs = torch.cat(outputs, dim =1)
-        # print(outputs.size())
         return torch.sum(outputs, dim = 1)
     
     def prepare_inputs(self, output_lagged: torch.Tensor, inputs_lagged: list[torch.Tensor]):
         inputlist = inputs_lagged
         inputlist.append(output_lagged)
-    #  '   print(inputlist)
-    #     print("x")'
         flipped = [tensor.flip(dims = [0]) for tensor in inputlist]
-        # print(flipped[0].size())
         inputs = []
         for i in range(max([tensor.size(dim=1) for tensor in flipped])):
-            # print([tensor[i] for tensor in flipped if i<tensor.size(dim=0)])
             input = torch.cat([tensor[:,i].unsqueeze(dim=1) for tensor in flipped if i<tensor.size(dim=1)], dim=1)
             inputs.append(input)
         return inputs
+
+    def identity(x):
+        return x
 
 class LAGNET(nn.Module):
     def __init__(self, n_inputs: int, n_hidden: int, layersize: int , afunc, bias:bool):
