@@ -142,10 +142,10 @@ class DirectControllerSim(DirectController):
 
     def step(self, action):
         """
-        Step the environment for one update step of the action. Collect sensor values of the simulation and compute
-        reward and next observation from them.
+        Step the environment for one output update step with the incoming action. Collect sensor values of the
+        simulation and compute reward and next observation from them.
         :param action: Change of u. action is always between (-1, 1)
-        :return:
+        :return: Observation, Reward, Done, Info
         """
         # use action[0] * 2 to be able to change the action from one extreme to the other.
         # If you want to change the system input from -1 to 1 in one step you need 2 as action.
