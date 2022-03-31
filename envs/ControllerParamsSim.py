@@ -85,7 +85,11 @@ class ControllerParamsSim(ControllerParams):
         # https://math.stackexchange.com/questions/2424383/how-should-i-interpret-the-static-gain-from-matlabs-command-zpkdata
         U = np.ones_like(T) * self.w[0, 0] * (self.sim.obs_scale / self.open_loop_gain)
         _, step_response, states = control.forced_response(self.open_loop_sys, T, U, return_x=True)
-        self.sim.last_state = np.concatenate((np.array([[0]]), states[:, -1:]))
+
+        extra_states = 0
+        extra_states += 1 if "I" in self.controller_style else 0
+        extra_states += 1 if "D" in self.controller_style else 0
+        self.sim.last_state = np.concatenate((states[:, -1:], np.array([[0]] * extra_states)))
 
         initial_input = (self.w[0, 0] * self.sim.obs_scale)/(self.open_loop_gain * self.sim.action_scale)
         self.last_u = deque([initial_input] * self.nbr_measurements_to_keep, maxlen=self.nbr_measurements_to_keep)

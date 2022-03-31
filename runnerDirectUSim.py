@@ -88,6 +88,8 @@ if __name__ == "__main__":
 
     callbacks = CallbackList([eval_callback])
 
+    # # use DDPG and create a tensorboard
+    # # start tensorboard server with tensorboard --logdir ./{tensorboard_log}/
     model = DDPG(custom_policy.CustomDDPGPolicy,
                  env,
                  learning_starts=3000,  # delay start to compensate for bad starting point

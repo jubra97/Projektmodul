@@ -71,6 +71,13 @@ class ControllerParams(gym.Env, abc.ABC):
         self.p_range = p_range
         self.i_range = i_range
         self.d_range = d_range
+        self.controller_style = ""
+        if self.p_range:
+            self.controller_style += "P"
+        if self.i_range:
+            self.controller_style += "I"
+        if self.d_range:
+            self.controller_style += "D"
 
         # create fifo lists for latest measurement points, new data is inserted from the right side. Because of this the
         # most recent value is the in e.g. self.last_y[-1].
@@ -97,16 +104,9 @@ class ControllerParams(gym.Env, abc.ABC):
 
         # action space size is always one as u is calculated directly
         action_size = 0
-        self.controller_style = ""
-        if self.p_range:
-            action_size += 1
-            self.controller_style += "P"
-        if self.i_range:
-            action_size += 1
-            self.controller_style += "I"
-        if self.d_range:
-            action_size += 1
-            self.controller_style += "D"
+        action_size += 1 if "P" in self.controller_style else 0
+        action_size += 1 if "I" in self.controller_style else 0
+        action_size += 1 if "D" in self.controller_style else 0
         self.action_space = gym.spaces.Box(low=np.array([-1]*action_size, dtype=np.float32),
                                            high=np.array([1]*action_size, dtype=np.float32),
                                            shape=(action_size,),
