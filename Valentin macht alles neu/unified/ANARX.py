@@ -1,4 +1,3 @@
-from numpy import identity
 import torch
 import torch.nn as nn
 from NARXNET import NARXNET
@@ -29,8 +28,8 @@ class ANARX(NARXNET):
             self.lag_map[i] = mask
         self.subnets = [LAGNET(sum(self.lag_map[i]), n_hidden, layersize, afunc, bias) for i in range(self.n_subnets)]
         if SANARX:
-            id = identity
-            self.subnets[0] = LAGNET(sum(self.lag_map[0]), 1, sum(self.lag_map[0]), identity, bias)
+            id = self.identity
+            self.subnets[0] = LAGNET(sum(self.lag_map[0]), 1, sum(self.lag_map[0]), id, bias)
         self.subnets = nn.ModuleList(self.subnets)
     
     def forward(self, output_lagged: torch.Tensor, inputs_lagged: list[torch.Tensor]):
