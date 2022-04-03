@@ -49,19 +49,25 @@ class CustomEvalCallback(BaseCallback):
         self.best_model_save_path = best_model_save_path
         self.best_reward = -np.inf
 
-    # def _init_callback(self):
-    #     print(type(self.model.actor))
-    #     import torch as th
-    #     self.logger.output_formats[1].writer.add_graph(self.model.actor.mu, th.Tensor([1] * 7).to(self.model.device))
-    #     print("A")
-    #     # import torch.nn as nn
-    #     # def init_with_zero(m):
-    #     #     if type(m) == nn.Linear:
-    #     #         nn.init.zeros_(m.weight)
-    #     #         # nn.init.zeros_(m.bias)
-    #     # self.model.actor.mu.apply(init_with_zero)
-    #     # print("A")
-    #     # print("B")
+    def _init_callback(self):
+        print(type(self.model.actor))
+        import torch as th
+        # self.logger.output_formats[1].writer.add_graph(self.model.actor.mu, th.Tensor([1] * 7).to(self.model.device))
+        # print("A")
+        # import torch.nn as nn
+        # def init_with_zero(m):
+        #     if type(m) == nn.Linear:
+        #         # print(m.weight)
+        #         # nn.init.uniform_(m.weight, -0.00001, 0.00001)
+        #         # print(m.weight)
+        #         nn.init.zeros_(m.weight)
+        # self.model.actor.mu.apply(init_with_zero)
+        # self.model.actor_target.mu.apply(init_with_zero)
+
+        # self.model.critic.mu.apply(init_with_zero)
+        # self.model.critic_target.mu.apply(init_with_zero)
+        # print("A")
+        # print("B")
 
     def _on_step(self) -> bool:
 

@@ -340,6 +340,7 @@ class DirectController(gym.Env, abc.ABC):
         action_change = (self.last_u[-(self.measurements_per_output_update + 1)]
                          - self.last_u[-self.measurements_per_output_update]) \
                         * (1 / self.measurements_per_output_update)
+        # action_change = y[-1] - y[-2]
 
         abs_error = abs(e)
         abs_action_change = abs(action_change)

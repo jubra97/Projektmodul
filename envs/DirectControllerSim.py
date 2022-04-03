@@ -218,12 +218,13 @@ class DirectControllerSim(DirectController):
         fig.tight_layout()
         return fig, ax
 
-    def eval(self, model, folder_name):
+    def eval(self, model, folder_name, options_dict=None):
         """
         Run an evaluation with different steps and ramps. Create a plot for every run and save it. Also save a json file
         with some statistics of a run.
         :param model: Model to be used for action prediction.
         :param folder_name: Folder to save evaluation in.
+        :param options_dict: Dict to add to extra_info json file which is generated with performance data.
         """
         steps = np.linspace(0, 0.5, 20)
         slopes = np.linspace(0, 0.5, 3)
@@ -235,6 +236,9 @@ class DirectControllerSim(DirectController):
         rise_times = []
         setting_times = []
         extra_info = {}
+
+        for key, value in options_dict.items():
+            extra_info[key] = value
         for step in steps:
             for slope in slopes:
                 # slope = slope * 0.1
@@ -292,7 +296,19 @@ class DirectControllerSim(DirectController):
         extra_info["smoothness"] = np.mean(sms)
 
         with open(f"{folder_name}\\extra_info.json", 'w+') as f:
-            json.dump(extra_info, f)
+            json.dump(extra_info, f, indent=4, default=custom_default)
         print(f"Eval Info: RMSE: {np.mean(rmse)} --- Smoothness: {np.mean(sms)}")
 
         return extra_info
+
+
+def custom_default(obj):
+    if callable(obj):
+        try:
+            out = obj.__name__
+        except AttributeError:
+            out = obj.__class__.__name__
+    else:
+        raise TypeError(f'Object of type {obj.__class__.__name__} '
+                        f'is not JSON serializable')
+    return out
