@@ -8,7 +8,14 @@ from envs.DirectControl import DirectController
 
 
 class DirectControllerOnline(DirectController):
-    def __init__(self, online_sys=None, log=True,  output_freq=100, sensor_freq=4000):
+    def __init__(self,
+                 online_sys=None,
+                 log=True,
+                 output_freq=100,
+                 sensor_freq=4000,
+                 reward_kwargs=None,
+                 observation_kwargs=None,
+                 ):
         """
         Create a gym environment to directly control the actuating value (u) the given online system.
         :param online_sys: Connection to the online system.
@@ -24,7 +31,12 @@ class DirectControllerOnline(DirectController):
         self.last_step_time = None
         self.last_reset_time = None
 
-        super().__init__(log=log, output_freq=output_freq, sensor_freq=sensor_freq)
+        super().__init__(log=log,
+                         output_freq=output_freq,
+                         sensor_freq=sensor_freq,
+                         reward_kwargs=reward_kwargs,
+                         observation_kwargs=observation_kwargs,
+                         )
 
     def custom_reset(self):
         """
@@ -152,4 +164,4 @@ class DirectControllerOnline(DirectController):
         ax[1][1].legend()
 
         fig.tight_layout()
-        return fig
+        return fig, ax
