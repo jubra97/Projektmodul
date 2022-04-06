@@ -15,7 +15,7 @@ import custom_policy
 from CustomEvalCallback import CustomEvalCallback
 from envs.DirectControllerOnline import DirectControllerOnline
 from envs.DirectControllerOnlineConnection import DirectControllerOnlineConnection
-
+import utils
 
 observation_options = {
     # other possible options: "raw_with_vel", "raw_with_states", "error_with_states", "error_with_extra_components"
@@ -57,30 +57,13 @@ policy_options = {
 rl_options = {
     "save_path": "controller_test_online",
     "tensorboard_log_name": "tensorboard_controller_test_online",
-    "timesteps": 50_000,
+    "timesteps": 100_000,
     "action_noise": 0.05,
 }
 
 params_dict = {"env_options": env_options,
                "policy_options": policy_options,
                "rl_options": rl_options}
-
-
-def custom_default(obj):
-    if callable(obj):
-        try:
-            out = obj.__name__
-        except AttributeError:
-            out = obj.__class__.__name__
-    elif isinstance(obj, DirectControllerOnlineConnection):
-        out = None
-    else:
-        raise TypeError(f'Object of type {obj.__class__.__name__} '
-                        f'is not JSON serializable')
-    return out
-
-
-
 
 
 if __name__ == "__main__":
@@ -128,8 +111,10 @@ if __name__ == "__main__":
     # # # save model if you want to
     model.save(f"{rl_options['save_path']}\\{run_nbr}\\model")
 
+    utils.export_onnx(model, f"{rl_options['save_path']}\\{run_nbr}\\model.onnx")
+
     with open(f"{rl_options['save_path']}\\{run_nbr}\\extra_info.json", 'w+') as f:
-        json.dump(params_dict, f, indent=4, default=custom_default)
+        json.dump(params_dict, f, indent=4, default=utils.custom_default_json)
 
 
 

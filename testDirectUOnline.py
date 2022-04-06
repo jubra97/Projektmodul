@@ -6,7 +6,7 @@ from envs.DirectControllerOnline import DirectControllerOnline
 from envs.DirectControllerOnlineConnection import DirectControllerOnlineConnection
 from stable_baselines3 import DDPG
 
-run_path = r"C:\Users\brandlju\PycharmProjects\Projektmodul\controller_test_online\1"
+run_path = r"C:\Users\brandlju\PycharmProjects\Projektmodul\controller_test_online\2"
 
 if __name__ == "__main__":
     with open(f"{run_path}\\extra_info.json", 'r') as f:
@@ -29,12 +29,20 @@ if __name__ == "__main__":
     env = DirectControllerOnline(**env_options)
     model = DDPG.load(f"{run_path}\\model.zip", env)
 
-    while True:
+    obss = []
+    for _ in range(3):
         time.sleep(0.5)
         done = False
         obs = env.reset()
         while not done:
             action, _ = model.predict(obs)
             obs, reward, done, info = env.step(action)
+
+            obss.append(obs)
+
+    import matplotlib.pyplot as plt
+    plt.plot(obss)
+    plt.grid()
+    plt.show()
 
 
