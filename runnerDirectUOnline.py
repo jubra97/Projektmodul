@@ -43,7 +43,7 @@ env_options = {
 }
 
 policy_options = {
-    "actor_layers": 2,
+    "actor_layers": 0,
     "actor_layer_width": 10,  # amount of neurons per layer in the hidden layers
     "actor_activation_fun": th.nn.Tanh(),
     "actor_end_activation_fun": th.nn.Tanh(),  # must be a activation function that clips the value between (-1, 1)
@@ -106,16 +106,18 @@ if __name__ == "__main__":
                  policy_kwargs=policy_options,
                  )
 
+    # model = DDPG.load(r"C:\Users\brandlju\PycharmProjects\Projektmodul\controller_test_online\5\model.zip", env, force_reset=True,
+    #                   custom_objects={"learning_starts": 0,
+    #                                   "action_noise": action_noise})
+
     model.learn(total_timesteps=rl_options["timesteps"], tb_log_name=f"{run_nbr}", callback=callbacks)
     # #
     # # # save model if you want to
     model.save(f"{rl_options['save_path']}\\{run_nbr}\\model")
 
-    utils.export_onnx(model, f"{rl_options['save_path']}\\{run_nbr}\\model.onnx")
-
     with open(f"{rl_options['save_path']}\\{run_nbr}\\extra_info.json", 'w+') as f:
         json.dump(params_dict, f, indent=4, default=utils.custom_default_json)
 
-
+    utils.export_onnx(model, f"{rl_options['save_path']}\\{run_nbr}\\model.onnx")
 
 

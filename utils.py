@@ -7,7 +7,7 @@ def export_onnx(model, export_path):
     class OnnxablePolicy(torch.nn.Module):
         def __init__(self, actor):
             super().__init__()
-            self.actor = actor.actor.mu
+            self.actor = actor.actor_target.mu
             print(self.actor)
 
         def forward(self, observation):
