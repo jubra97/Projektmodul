@@ -274,8 +274,14 @@ class DirectController(gym.Env, abc.ABC):
         self.integrated_error = error * 1 / self.output_freq
 
         system_input = np.mean(system_inputs[-average_length:])
-        system_input_last = np.mean(system_inputs[-average_length * 2:-average_length])
-        system_input_vel = (system_input - system_input_last) * (average_length / self.sensor_freq)
+        # ensure that a change in u was made to calculate input velocity
+        if average_length < self.measurements_per_output_update:
+            system_input_vel = (system_inputs[-(self.measurements_per_output_update + 1)] - system_inputs[-1])\
+                               * 1 / self.measurements_per_output_update
+        else:
+            system_input = np.mean(system_inputs[-average_length:])
+            system_input_last = np.mean(system_inputs[-average_length * 2:-average_length])
+            system_input_vel = (system_input - system_input_last) * (average_length / self.sensor_freq)
 
         system_output = np.mean(system_outputs[-average_length:])
         system_output_last = np.mean(system_outputs[-average_length * 2:-average_length])
@@ -285,27 +291,27 @@ class DirectController(gym.Env, abc.ABC):
         obs = [error]
         if self.log:
             self.episode_log["obs"]["error"].append(obs[-1])
-        if obs_config["i"]:
+        if "i" in obs_config and obs_config["i"]:
             obs.append(self.integrated_error)
             if self.log:
                 self.episode_log["obs"]["error_integrated"].append(obs[-1])
-        if obs_config["d"]:
+        if "d" in obs_config and obs_config["d"]:
             obs.append(error_vel)
             if self.log:
                 self.episode_log["obs"]["error_vel"].append(obs[-1])
-        if obs_config["input_vel"]:
+        if "input_vel" in obs_config and obs_config["input_vel"]:
             obs.append(system_input_vel)
             if self.log:
                 self.episode_log["obs"]["input_vel"].append(obs[-1])
-        if obs_config["output_vel"]:
+        if "output_vel" in obs_config and obs_config["output_vel"]:
             obs.append(system_output_vel)
             if self.log:
-                self.episode_log["obs"]["outputs_vel"].append(obs[-1])
-        if obs_config["output"]:
+                self.episode_log["obs"]["output_vel"].append(obs[-1])
+        if "output" in obs_config and obs_config["output"]:
             obs.append(system_output)
             if self.log:
                 self.episode_log["obs"]["system_output"].append(obs[-1])
-        if obs_config["input"]:
+        if "input" in obs_config and obs_config["input"]:
             obs.append(system_input)
             if self.log:
                 self.episode_log["obs"]["system_input"].append(obs[-1])
