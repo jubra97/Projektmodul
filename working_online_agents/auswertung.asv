@@ -1,0 +1,19 @@
+a = load("16_0Hidden\auswertung_on_sps.mat")
+b = load("12_2Hidden\auswertung_on_sps.mat")
+
+c = load("16_0Hidden\auswertung_with_ads.mat")
+d = load("12_2Hidden\auswertung_with_ads.mat")
+
+figure
+plot(a.data(3, :))
+hold on
+plot(b.data(3, :))
+plot(c.data(3, :))
+plot(d.data(3, :))
+
+figure
+plot(a.data(3, :))
+hold on
+plot(b.data(3, :))
+plot(c.data(3, :))
+plot(d.data(3, :))
