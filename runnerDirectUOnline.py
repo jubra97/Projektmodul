@@ -19,8 +19,13 @@ import utils
 
 observation_options = {
     # other possible options: "raw_with_vel", "raw_with_states", "error_with_states", "error_with_extra_components"
-    "function": "error_with_vel",
+    "function": "error_with_extra_components",
     "average_length": 1,  # use average of last 5 sensor data points
+    "obs_config": {
+        "d": True,
+        "input_vel": True,
+        "output_vel": True,
+    }
 }
 
 # for more information look at the docstring of DirectControl.create_reward()
@@ -57,7 +62,7 @@ policy_options = {
 rl_options = {
     "save_path": "controller_test_online",
     "tensorboard_log_name": "tensorboard_controller_test_online",
-    "timesteps": 100_000,
+    "timesteps": 50_000,
     "action_noise": 0.05,
 }
 
