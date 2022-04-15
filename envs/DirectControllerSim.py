@@ -275,7 +275,9 @@ class DirectControllerSim(DirectController):
                     upper_bound = step + step * 0.05
                     # go backwards through sim._sim_out and find first index out of bounds
                     index_lower = np.argmax(np_sim_out[::-1] < lower_bound)
+                    index_lower = index_lower if index_lower > 0 else self.sim.n_sample_points
                     index_upper = np.argmax(np_sim_out[::-1] > upper_bound)
+                    index_upper = index_upper if index_upper > 0 else self.sim.n_sample_points
                     last_out_of_bounds = min([index_lower, index_upper])
                     setting_time = (self.sim.n_sample_points - last_out_of_bounds - start_time) / self.sim.model_freq
                     setting_times.append(setting_time)
