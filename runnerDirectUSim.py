@@ -26,14 +26,14 @@ reward_options = {
     "discrete_bonus": True,
     "oscillation_pen_dependent_on_error": False,
     "oscillation_pen_fun": np.sqrt,
-    "oscillation_pen_gain": 1,
+    "oscillation_pen_gain": 20,
     "error_pen_fun": None,
 }
 
 env_options = {
     "model_freq": 12_000,  # sim with 12_000 Hz
     "sensor_freq": 4_000,  # generate sensor data with 4_000 Hz
-    "output_freq": 100,  # update output with 100 Hz
+    "output_freq": 200,  # update output with 100 Hz
     "observation_kwargs": observation_options,
     "reward_kwargs": reward_options,
     "log": False,  # log false for training envs
@@ -46,7 +46,7 @@ policy_options = {
     "actor_end_activation_fun": th.nn.Tanh(),  # must be a activation function that clips the value between (-1, 1)
     "actor_bias": False,
     "critic_layers": 2,
-    "critic_layer_width": 200,  # amount of neurons per layer in the hidden layers
+    "critic_layer_width": 400,  # amount of neurons per layer in the hidden layers
     "critic_activation_fun": th.nn.Tanh(),
     "critic_bias": True,
 }
@@ -55,8 +55,8 @@ rl_options = {
     "save_path": "controller_test",
     "tensorboard_log_name": "tensorboard_controller_test",
     "cpu_cores": 3,
-    "timesteps": 300_000,
-    "action_noise": 0.1,
+    "timesteps": 100_000,
+    "action_noise": 0.01,
 }
 
 params_dict = {"env_options": env_options,
