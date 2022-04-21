@@ -19,13 +19,13 @@ import utils
 
 observation_options = {
     # other possible options: "raw_with_vel", "raw_with_states", "error_with_states", "error_with_extra_components"
-    "function": "error_with_extra_components",
+    "function": "error_with_vel",
     "average_length": 1,  # use average of last 5 sensor data points
-    "obs_config": {
-        "d": True,
-        "input_vel": True,
-        "output_vel": True,
-    }
+    # "obs_config": {
+    #     "d": True,
+    #     "input_vel": True,
+    #     "output_vel": True,
+    # }
 }
 
 # for more information look at the docstring of DirectControl.create_reward()
@@ -48,9 +48,9 @@ env_options = {
 }
 
 policy_options = {
-    "actor_layers": 0,
+    "actor_layers": 2,
     "actor_layer_width": 10,  # amount of neurons per layer in the hidden layers
-    "actor_activation_fun": th.nn.Tanh(),
+    "actor_activation_fun": th.nn.ReLU(),
     "actor_end_activation_fun": th.nn.Tanh(),  # must be a activation function that clips the value between (-1, 1)
     "actor_bias": False,
     "critic_layers": 2,
@@ -62,7 +62,7 @@ policy_options = {
 rl_options = {
     "save_path": "controller_test_online",
     "tensorboard_log_name": "tensorboard_controller_test_online",
-    "timesteps": 50_000,
+    "timesteps": 100_000,
     "action_noise": 0.05,
 }
 
@@ -87,8 +87,11 @@ if __name__ == "__main__":
     env_options["log"] = True  # log only true for evaluation envs
 
     # create normal action noise
-    n_actions = env.action_space.shape[-1]
-    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(rl_options["action_noise"]) * np.ones(n_actions))
+    if rl_options["action_noise"] is not None:
+        n_actions = env.action_space.shape[-1]
+        action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(rl_options["action_noise"]) * np.ones(n_actions))
+    else:
+        action_noise = None
 
     # create callback that logs matplotlib figures on tensorboard and saves possible best model
     online_eval_env = DirectControllerOnline(**env_options)  # create eval env

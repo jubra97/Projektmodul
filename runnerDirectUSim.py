@@ -56,7 +56,7 @@ rl_options = {
     "tensorboard_log_name": "tensorboard_controller_test",
     "cpu_cores": 3,
     "timesteps": 100_000,
-    "action_noise": 0.01,
+    "action_noise": 0.1,
 }
 
 params_dict = {"env_options": env_options,
