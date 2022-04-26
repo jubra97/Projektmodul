@@ -266,8 +266,8 @@ class DirectControllerSim(DirectController):
                     rise_stop = 0.9 * step
                     start_time = int(self.sim.model_freq * 0.5)
                     index_start = np.argmax(np_sim_out[start_time:] > rise_start)
+                    index_end = np.argmax(np_sim_out[start_time+index_start:] > rise_stop)
                     rise_time = index_end / self.sim.model_freq
-                    rise_time = (index_end - index_start) / self.sim.model_freq
                     if rise_time == 0:
                         rise_time = 1
                     rise_times.append(rise_time)

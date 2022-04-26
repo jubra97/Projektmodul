@@ -12,6 +12,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 
 import custom_policy
 from CustomEvalCallback import CustomEvalCallback
+from ActionNoiseCallback import ActionNoiseCallback
 from envs.DirectControllerSim import DirectControllerSim
 
 observation_options = {
@@ -26,7 +27,7 @@ reward_options = {
     "discrete_bonus": True,
     "oscillation_pen_dependent_on_error": False,
     "oscillation_pen_fun": np.sqrt,
-    "oscillation_pen_gain": 20,
+    "oscillation_pen_gain": 1,
     "error_pen_fun": None,
 }
 
@@ -55,8 +56,8 @@ rl_options = {
     "save_path": "controller_test",
     "tensorboard_log_name": "tensorboard_controller_test",
     "cpu_cores": 3,
-    "timesteps": 100_000,
-    "action_noise": 0.1,
+    "timesteps": 200_000,
+    "action_noise": (0.1, 0, 100_000),
 }
 
 params_dict = {"env_options": env_options,
@@ -79,10 +80,6 @@ if __name__ == "__main__":
 
     env_options["log"] = True  # log only true for evaluation envs
 
-    # create normal action noise
-    n_actions = env.action_space.shape[-1]
-    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(rl_options["action_noise"]) * np.ones(n_actions))
-
     # create callback that logs matplotlib figures on tensorboard and saves possible best model
     online_eval_env = DirectControllerSim(**env_options)  # create eval env
     online_eval_env = Monitor(online_eval_env)
@@ -93,7 +90,19 @@ if __name__ == "__main__":
 
     callbacks = CallbackList([eval_callback])
 
-    # # use DDPG and create a tensorboard
+    if isinstance(rl_options["action_noise"], tuple) and len(rl_options["action_noise"]):
+        action_noise_callback = ActionNoiseCallback(rl_options["action_noise"][0], rl_options["action_noise"][1], rl_options["action_noise"][2])
+        callbacks.callbacks.append(action_noise_callback)
+        action_noise = None
+    elif rl_options["action_noise"]:
+        # create normal action noise
+        n_actions = env.action_space.shape[-1]
+        action_noise = NormalActionNoise(mean=np.zeros(n_actions),
+                                         sigma=float(rl_options["action_noise"]) * np.ones(n_actions))
+    else:
+        action_noise = None
+
+        # # use DDPG and create a tensorboard
     # # start tensorboard server with tensorboard --logdir ./{tensorboard_log}/
     model = DDPG(custom_policy.CustomDDPGPolicy,
                  env,
@@ -105,7 +114,6 @@ if __name__ == "__main__":
                  train_freq=1,
                  gradient_steps=1,
                  learning_rate=1e-3,
-                 gamma=0.7,
                  )
     model.learn(total_timesteps=rl_options["timesteps"], tb_log_name=f"{run_nbr}", callback=callbacks)
     DirectControllerSim(**env_options).eval(model,
