@@ -2,6 +2,7 @@ import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from stable_baselines3.common.callbacks import EventCallback, BaseCallback
 from stable_baselines3.common.logger import Figure
+from stable_baselines3.common.noise import NormalActionNoise
 import numpy as np
 
 class CustomEvalCallback(BaseCallback):
@@ -70,6 +71,20 @@ class CustomEvalCallback(BaseCallback):
         # print("B")
 
     def _on_step(self) -> bool:
+        # n_actions = self.model.action_space.shape[-1]
+        # if self.n_calls % 10_000 == 0:
+        #     print("Called")
+        #     self.model.action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(0.1) * np.ones(n_actions))
+        # if self.n_calls % 500 == 0:
+        #     if self.model.action_noise:
+        #         last_noise = self.model.action_noise._sigma
+        #         new_noise = (last_noise - 0.01) if (last_noise - 0.01) > 0 else None
+        #         if new_noise is not None:
+        #             self.model.action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(new_noise) * np.ones(n_actions))
+        #         else:
+        #             self.model.action_noise = None
+        #     print(f"Action Noise: {self.model.action_noise}")
+
 
         if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
             self.evaluate = True
