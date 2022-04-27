@@ -2,61 +2,40 @@ command:
   - venv\Scripts\python.exe
   - ${program}
   - ${args}
-program: runnerDirectControlPT2_WaB.py
+program: runnerDirectUSim_WaB.py
 method: random
-metric:
-  name: rollout/ep_rew_mean
-  goal: maximize
 parameters:
-  critic_layers:
+  output_freq:
+    values:
+      - 100
+      - 200
+      - 400
+      - 800
+  average_length:
     values:
       - 1
       - 2
-      - 3
-  critic_layer_width:
+      - 4
+  oscillation_pen_gain:
     values:
+      - 0.01
+      - 0.1
+      - 1
+      - 10
       - 50
-      - 100
-      - 200
-      - 300
-  critic_activation_fun:
+  oscillation_pen_dependent_on_error:
     values:
-      - nn.ReLU()
-      - nn.Tanh()
+      - true
+      - false
   actor_layers:
     values:
       - 0
-      - 1
       - 2
-  actor_activation_fun:
+  action_noise:
     values:
-      - nn.ReLU()
-      - nn.Tanh()
-  obs_i:
-    values:
-      - True
-      - False
-  obs_d:
-    values:
-      - True
-      - False
-  obs_input_vel:
-    values:
-      - True
-      - False
-  obs_output_vel:
-    values:
-      - True
-      - False
-  obs_output:
-    values:
-      - True
-      - False
-  obs_input:
-    values:
-      - True
-      - False
-  reward_fun:
-    values:
-      - discrete
-      - discrete_u_pen_dep_on_error
+      - 0.2
+      - 0.1
+      - 0.05
+      - 0.01
+      - 0.005
+      - 0.001

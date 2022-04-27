@@ -151,6 +151,7 @@ class DirectControllerSim(DirectController):
         # If you want to change the system input from -1 to 1 in one step you need 2 as action.
 
         new_action = self.last_u[-1] + action[0] * 2
+        # new_action = action[0]
         new_action = np.clip(new_action, -1, 1)
         system_input_trajectory = [new_action] * (self.sim.model_steps_per_controller_update + 1)
         self.update_simulation(system_input_trajectory)
@@ -266,8 +267,8 @@ class DirectControllerSim(DirectController):
                     rise_stop = 0.9 * step
                     start_time = int(self.sim.model_freq * 0.5)
                     index_start = np.argmax(np_sim_out[start_time:] > rise_start)
+                    index_end = np.argmax(np_sim_out[index_start:] > rise_stop)
                     rise_time = index_end / self.sim.model_freq
-                    rise_time = (index_end - index_start) / self.sim.model_freq
                     if rise_time == 0:
                         rise_time = 1
                     rise_times.append(rise_time)

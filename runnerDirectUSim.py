@@ -3,7 +3,7 @@ import pathlib
 
 import numpy as np
 import torch as th
-from stable_baselines3 import DDPG
+from stable_baselines3 import DDPG, SAC, TD3
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.monitor import Monitor
@@ -16,8 +16,14 @@ from envs.DirectControllerSim import DirectControllerSim
 
 observation_options = {
     # other possible options: "raw_with_vel", "raw_with_states", "error_with_states", "error_with_extra_components"
-    "function": "error_with_vel",
+    "function": "error_with_extra_components",
     "average_length": 1,  # use average of last 5 sensor data points
+    "obs_config": {
+        "d": True,
+        "i": True,
+        "input_vel": True,
+        "output_vel": True,
+    },
 }
 
 # for more information look at the docstring of DirectControl.create_reward()
@@ -26,14 +32,14 @@ reward_options = {
     "discrete_bonus": True,
     "oscillation_pen_dependent_on_error": False,
     "oscillation_pen_fun": np.sqrt,
-    "oscillation_pen_gain": 20,
+    "oscillation_pen_gain": 0.01,
     "error_pen_fun": None,
 }
 
 env_options = {
     "model_freq": 12_000,  # sim with 12_000 Hz
     "sensor_freq": 4_000,  # generate sensor data with 4_000 Hz
-    "output_freq": 200,  # update output with 100 Hz
+    "output_freq": 100,  # update output with 100 Hz
     "observation_kwargs": observation_options,
     "reward_kwargs": reward_options,
     "log": False,  # log false for training envs
