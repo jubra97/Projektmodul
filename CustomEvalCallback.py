@@ -121,6 +121,7 @@ class CustomEvalCallback(BaseCallback):
             fig, _ = self.eval_env.create_eval_plot()
             self.logger.record("Overview/A", Figure(fig, close=True), exclude=("stdout", "log", "json", "csv"))
             plt.close()
+            self.logger.record("rollout/ep_rew_mean_eval", np.sum(rewards))
             mean_reward = np.mean(rewards)
             if mean_reward > self.best_reward:
                 self.best_reward = mean_reward
