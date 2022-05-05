@@ -45,12 +45,10 @@ class ActionNoiseCallback(BaseCallback):
         self.noise_in_step = np.linspace(start_noise, end_noise, steps)
         self.best_reward = -np.inf
 
-
     def _on_step(self) -> bool:
         n_actions = self.model.action_space.shape[-1]
-        if self.n_calls < self.noise_in_step.shape[0]:
-            self.model.action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(self.noise_in_step[self.n_calls]) * np.ones(n_actions))
+        if self.num_timesteps < self.noise_in_step.shape[0]:
+            self.model.action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(self.noise_in_step[self.num_timesteps]) * np.ones(n_actions))
         else:
-            self.model.action_noise = None
-
+            self.model.action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=float(self.noise_in_step[-1]) * np.ones(n_actions))
         return True
