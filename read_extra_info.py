@@ -1,15 +1,15 @@
 import json
 import os
 
-dirs = os.listdir("controller_test")
+dirs = os.listdir("statistical_scattering3")
 
 extra_infos = []
 for dir in dirs:
-    if int(dir) >= 106 and int(dir) < 113:
-        name = f"controller_test\\{dir}"
+    name = f"statistical_scattering3\\{dir}"
+    if int(dir) < 10:
         with open(name + "\\extra_info.json", "r") as f:
             extra_infos.append(json.load(f))
-            print(dir)
-            print(extra_infos[-1]["rmse"])
-            print(extra_infos[-1]["mean_setting_time"])
-            print(extra_infos[-1]["mean_rise_time"] - 0.5)
+            print(f"Name {dir}")
+            print(f"RMSE: {extra_infos[-1]['rmse']}")
+            print(f"Setting Time: {extra_infos[-1]['mean_setting_time']}")
+            print(f"Riste Time: {extra_infos[-1]['mean_rise_time']}")
