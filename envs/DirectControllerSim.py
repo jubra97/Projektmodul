@@ -150,7 +150,9 @@ class DirectControllerSim(DirectController):
         # use action[0] * 2 to be able to change the action from one extreme to the other.
         # If you want to change the system input from -1 to 1 in one step you need 2 as action.
 
+        # new_action = self.last_u[-1] + np.sqrt(abs(action[0])) * 2 * np.sign(action[0])
         new_action = self.last_u[-1] + action[0] * 2
+
         # new_action = action[0]
         new_action = np.clip(new_action, -1, 1)
         system_input_trajectory = [new_action] * (self.sim.model_steps_per_controller_update + 1)

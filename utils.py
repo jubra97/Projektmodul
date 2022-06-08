@@ -1,7 +1,9 @@
 import torch
 import stable_baselines3.common.preprocessing
-from envs.DirectControllerOnlineConnection import DirectControllerOnlineConnection
-
+try:
+    from envs.DirectControllerOnlineConnection import DirectControllerOnlineConnection
+except FileNotFoundError:
+    ...
 
 def export_onnx(model, export_path):
     class OnnxablePolicy(torch.nn.Module):
@@ -31,3 +33,23 @@ def custom_default_json(obj):
         raise TypeError(f'Object of type {obj.__class__.__name__} '
                         f'is not JSON serializable')
     return out
+
+
+def linear_schedule(initial_value: float):
+    """
+    Linear learning rate schedule.
+
+    :param initial_value: Initial learning rate.
+    :return: schedule that computes
+      current learning rate depending on remaining progress
+    """
+    def func(progress_remaining: float) -> float:
+        """
+        Progress will decrease from 1 (beginning) to 0.
+
+        :param progress_remaining:
+        :return: current learning rate
+        """
+        return progress_remaining * initial_value
+
+    return func
