@@ -5,37 +5,17 @@ command:
 program: runnerDirectUSim_WaB.py
 method: random
 parameters:
-  output_freq:
+  method:
     values:
-      - 100
-      - 200
-      - 400
-      - 800
-  average_length:
-    values:
-      - 1
-      - 2
-      - 4
-  oscillation_pen_gain:
-    values:
-      - 0.01
-      - 0.1
-      - 1
-      - 10
-      - 50
-  oscillation_pen_dependent_on_error:
-    values:
-      - true
-      - false
-  actor_layers:
-    values:
-      - 0
-      - 2
-  action_noise:
-    values:
-      - 0.2
-      - 0.1
-      - 0.05
-      - 0.01
-      - 0.005
-      - 0.001
+      - obs_with_vel_1
+      - obs_with_vel_3
+      - obs_with_vel_5
+      - error_with_vel_1
+      - error_with_vel_3
+      - error_with_vel_5
+      - raw_with_last_states_2
+      - raw_with_last_states_3
+      - raw_with_last_states_5
+      - error_with_last_states_2
+      - error_with_last_states_3
+      - error_with_last_states_5

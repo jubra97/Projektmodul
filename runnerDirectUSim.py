@@ -110,7 +110,7 @@ if __name__ == "__main__":
         else:
             action_noise = None
 
-            # # use DDPG and create a tensorboard
+        # # use DDPG and create a tensorboard
         # # start tensorboard server with tensorboard --logdir ./{tensorboard_log}/
         model = DDPG(custom_policy.CustomDDPGPolicy,
                      env,
