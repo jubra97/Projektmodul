@@ -8,7 +8,7 @@ import numpy as np
 
 from Simulation.OpenLoopSim import OpenLoopSim
 from envs.DirectControl import DirectController
-
+from utils import custom_default
 
 class DirectControllerSim(DirectController):
     def __init__(self,
@@ -312,13 +312,4 @@ class DirectControllerSim(DirectController):
         return extra_info
 
 
-def custom_default(obj):
-    if callable(obj):
-        try:
-            out = obj.__name__
-        except AttributeError:
-            out = obj.__class__.__name__
-    else:
-        raise TypeError(f'Object of type {obj.__class__.__name__} '
-                        f'is not JSON serializable')
-    return out
+

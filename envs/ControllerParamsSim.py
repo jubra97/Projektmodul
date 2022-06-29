@@ -8,6 +8,7 @@ import numpy as np
 
 from Simulation.IOSim import IOSim
 from envs.ControllerParams import ControllerParams
+from utils import custom_default
 
 
 class ControllerParamsSim(ControllerParams):
@@ -308,7 +309,7 @@ class ControllerParamsSim(ControllerParams):
         fig.tight_layout()
         return fig, ax
 
-    def eval(self, model, folder_name):
+    def eval(self, model, folder_name, options_dict=None):
         """
         Run an evaluation with different steps and ramps. Create a plot for every run and save it. Also save a json file
         with some statistics of a run.
@@ -325,6 +326,10 @@ class ControllerParamsSim(ControllerParams):
         rise_times = []
         setting_times = []
         extra_info = {}
+
+        for key, value in options_dict.items():
+            extra_info[key] = value
+
         for step in steps:
             for slope in slopes:
                 # slope = slope * 0.1
@@ -341,7 +346,7 @@ class ControllerParamsSim(ControllerParams):
                 sms.append(smoothness)
                 fig, ax = self.create_eval_plot()
 
-                np_sim_out = np.array(self.sim._sim_out[1, :])
+                np_sim_out = np.array(self.sim._sim_out)
 
                 rmse_episode = np.sqrt(np.square(np.array(self.w) - np_sim_out))
                 rmse.append(rmse_episode)
@@ -352,8 +357,10 @@ class ControllerParamsSim(ControllerParams):
                     rise_stop = 0.9 * step
                     start_time = int(self.sim.model_freq * 0.5)
                     index_start = np.argmax(np_sim_out[start_time:] > rise_start)
-                    index_end = np.argmax(np_sim_out[start_time:] > rise_stop)
-                    rise_time = (index_end - index_start) / self.sim.model_freq
+                    index_end = np.argmax(np_sim_out[start_time + index_start:] > rise_stop)
+                    rise_time = index_end / self.sim.model_freq
+                    if rise_time == 0:
+                        rise_time = 1
                     rise_times.append(rise_time)
 
                     # calculate setting time with 5% band
@@ -361,9 +368,15 @@ class ControllerParamsSim(ControllerParams):
                     upper_bound = step + step * 0.05
                     # go backwards through sim._sim_out and find first index out of bounds
                     index_lower = np.argmax(np_sim_out[::-1] < lower_bound)
+                    index_lower = index_lower if index_lower > 0 else self.sim.n_sample_points
                     index_upper = np.argmax(np_sim_out[::-1] > upper_bound)
+                    index_upper = index_upper if index_upper > 0 else self.sim.n_sample_points
                     last_out_of_bounds = min([index_lower, index_upper])
-                    setting_time = (self.sim.n_sample_points - last_out_of_bounds - start_time) / self.sim.model_freq
+                    if last_out_of_bounds >= (self.sim.n_sample_points - start_time):
+                        setting_time = 1
+                    else:
+                        setting_time = (
+                                                   self.sim.n_sample_points - last_out_of_bounds - start_time) / self.sim.model_freq
                     setting_times.append(setting_time)
 
                     ax[0][2].text(0.1, 0.9, f"Rise Time: {rise_time}", transform=ax[0][2].transAxes)
@@ -382,7 +395,7 @@ class ControllerParamsSim(ControllerParams):
         extra_info["smoothness"] = np.mean(sms)
 
         with open(f"{folder_name}\\extra_info.json", 'w+') as f:
-            json.dump(extra_info, f)
+            json.dump(extra_info, f, indent=4, default=custom_default)
         print(f"Eval Info: RMSE: {np.mean(rmse)} --- Smoothness: {np.mean(sms)}")
 
         return extra_info

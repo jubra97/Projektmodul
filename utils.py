@@ -53,3 +53,14 @@ def linear_schedule(initial_value: float):
         return progress_remaining * initial_value
 
     return func
+
+def custom_default(obj):
+    if callable(obj):
+        try:
+            out = obj.__name__
+        except AttributeError:
+            out = obj.__class__.__name__
+    else:
+        raise TypeError(f'Object of type {obj.__class__.__name__} '
+                        f'is not JSON serializable')
+    return out
