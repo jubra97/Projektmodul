@@ -95,7 +95,6 @@ if __name__ == "__main__":
 
     rl_options = {
         "save_path": "wandb_observations",
-        "tensorboard_log_name": "tensorboard_wandb_observations",
         "cpu_cores": 3,
         "timesteps": 300_000,
         "action_noise": (0.1, 0.0003, 250_000)
