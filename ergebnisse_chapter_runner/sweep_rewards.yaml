@@ -1,0 +1,45 @@
+command:
+  - venv\Scripts\python.exe
+  - ${program}
+  - ${args}
+program: ergebnisse_chapter_runner\runnerDirectControlSimRewardsWandB.py
+method: grid
+metric:
+  name: rollout/ep_rew_mean
+  goal: maximize
+  target: 100000000000000000
+early_terminate:
+  type: hyperband
+  min_iter: 20
+  eta: 2
+
+parameters:
+  oscillation_pen_gain:
+    values:
+      - 0
+      - 0.001
+      - 0.01
+      - 0.1
+      - 1
+      - 10
+      - 50
+      - 100
+  oscillation_pen_fun:
+    values:
+      - np.sqrt
+      - np.sqaure
+      - np.abs
+  error_pen_fun:
+    values:
+      - np.sqrt
+      - np.sqaure
+      - np.abs
+  oscillation_pen_dependent_on_error:
+    values:
+      - true
+      - false
+  discrete_bonus:
+    values:
+      - true
+      - false
+
