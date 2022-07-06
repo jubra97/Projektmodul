@@ -21,8 +21,11 @@ from envs.DirectControllerSim import DirectControllerSim
 
 if __name__ == "__main__":
     hyperparameter_defaults = {
-        "method": "error_with_vel",
-        "bias": False,
+        "oscillation_pen_gain": 1,
+        "oscillation_pen_fun": "np.sqrt",
+        "error_pen_fun": "np.sqrt",
+        "oscillation_pen_dependent_on_error": False,
+        "discrete_bonus": True
     }
 
     run = wandb.init(
@@ -41,11 +44,11 @@ if __name__ == "__main__":
     # for more information look at the docstring of DirectControl.create_reward()
     reward_options = {
         "function": "normal",  # add your own reward function if you want to
-        "discrete_bonus": True,
-        "oscillation_pen_dependent_on_error": False,
-        "oscillation_pen_fun": np.sqrt,
-        "oscillation_pen_gain": 25,
-        "error_pen_fun": None,
+        "discrete_bonus": config["discrete_bonus"],
+        "oscillation_pen_dependent_on_error": config["oscillation_pen_dependent_on_error"],
+        "oscillation_pen_fun": eval(config["error_pen_fun"]),
+        "oscillation_pen_gain": config["oscillation_pen_gain"],
+        "error_pen_fun": eval(config["error_pen_fun"]),
     }
 
     env_options = {
@@ -71,7 +74,7 @@ if __name__ == "__main__":
 
     rl_options = {
         "save_path": "wandb_rewards",
-        "cpu_cores": 3,
+        "cpu_cores": 4,
         "timesteps": 300_000,
         "action_noise": (0.1, 0.0003, 250_000)
     }
