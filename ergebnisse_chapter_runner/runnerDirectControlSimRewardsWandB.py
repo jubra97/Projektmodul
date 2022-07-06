@@ -92,7 +92,8 @@ if __name__ == "__main__":
     eval_callback = CustomEvalCallback(online_eval_env,
                                        eval_freq=1500,
                                        deterministic=True,
-                                       best_model_save_path=f"{run.dir}\\best_model")
+                                       best_model_save_path=f"{run.dir}\\best_model",
+                                       early_stopping=True)
     wandb_callback = WandbCallback(model_save_path=f"{run.dir}", verbose=2)
     callbacks = CallbackList([eval_callback, wandb_callback])
 

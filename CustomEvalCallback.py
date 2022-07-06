@@ -38,6 +38,7 @@ class CustomEvalCallback(BaseCallback):
             best_model_save_path,
             n_eval_episodes: int = 1,
             eval_freq: int = 10000,
+            early_stopping: bool = False,
             deterministic: bool = True,
             verbose: int = 1,
     ):
@@ -49,6 +50,8 @@ class CustomEvalCallback(BaseCallback):
         self.eval_env = eval_env
         self.best_model_save_path = best_model_save_path
         self.best_reward = -np.inf
+        self.early_stopping = early_stopping
+        self.early_stopping_counter = 0
 
     def _init_callback(self):
         print(type(self.model.actor))
@@ -103,8 +106,10 @@ class CustomEvalCallback(BaseCallback):
         #     plt.close()
         #     # first_layer_weight = self.model.actor.mu._modules["0"].weight
         #     # self.logger.output_formats[1].writer.add_histogram("test", first_layer_weight, self.n_calls)
-
-        return True
+        if self.early_stopping_counter < 3 and self.early_stopping:
+            return True
+        else:
+            return False
 
     def _on_rollout_end(self) -> None:
         if self.evaluate:
@@ -118,10 +123,17 @@ class CustomEvalCallback(BaseCallback):
                 rewards.append(reward)
 
             print(f"Logging Image Call Nr: {self.n_calls}")
-            fig, _ = self.eval_env.create_eval_plot()
+            fig, _, rmse, smoothness = self.eval_env.create_eval_plot()
             self.logger.record("Overview/A", Figure(fig, close=True), exclude=("stdout", "log", "json", "csv"))
             plt.close()
             self.logger.record("rollout/ep_rew_mean_eval", np.sum(rewards))
+            self.logger.record("rollout/ep_rmse_eval", rmse)
+            self.logger.record("rollout/ep_smoothness_eval", smoothness)
+            if self.num_timesteps > 120_000:
+                if rmse > 0.4:
+                    self.early_stopping_counter += 1
+                else:
+                    self.early_stopping_counter = 0
             mean_reward = np.mean(rewards)
             if mean_reward > self.best_reward:
                 self.best_reward = mean_reward
