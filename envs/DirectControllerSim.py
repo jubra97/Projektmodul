@@ -258,7 +258,7 @@ class DirectControllerSim(DirectController):
                     actions.append(action)
                 _, _, _, smoothness = self.eval_fft()
                 sms.append(smoothness)
-                fig, ax = self.create_eval_plot()
+                fig, ax, _, _ = self.create_eval_plot()
 
                 np_sim_out = np.array(self.sim._sim_out)
 
