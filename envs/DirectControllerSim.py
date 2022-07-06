@@ -218,7 +218,7 @@ class DirectControllerSim(DirectController):
         ax[1][2].text(0.5, 0.9, f"Smoothness: {sm}", transform=ax[1][2].transAxes)
         ax[1][2].grid()
 
-        rmse_episode = np.sqrt(np.square(np.array(self.w) - np.array(self.sim._sim_out)))
+        rmse_episode = np.mean(np.sqrt(np.square(np.array(self.w) - np.array(self.sim._sim_out))))
 
         fig.tight_layout()
         return fig, ax, rmse_episode, sm
