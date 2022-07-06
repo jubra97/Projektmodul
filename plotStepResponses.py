@@ -49,22 +49,22 @@ if __name__ == "__main__":
                 obs, reward, done, info = env.step(action)
         envs.append(env)
 
-    env = DirectControllerSim(**env_options)
-    for _ in range(1):
-        time.sleep(0.5)
-        done = False
-        obs = env.reset(step_start=0, step_end=0.5, step_slope=0)
-        actions = [0] * 50 + [0.25] + [0] * 99
-        i = 0
-        while not done:
-            action, _ = model.predict(obs)
-            obs, reward, done, info = env.step([actions[i]])
-            i += 1
-    envs.append(env)
+    # env = DirectControllerSim(**env_options)
+    # for _ in range(1):
+    #     time.sleep(0.5)
+    #     done = False
+    #     obs = env.reset(step_start=0, step_end=0.5, step_slope=0)
+    #     actions = [0] * 50 + [0.25] + [0] * 99
+    #     i = 0
+    #     while not done:
+    #         action, _ = model.predict(obs)
+    #         obs, reward, done, info = env.step([actions[i]])
+    #         i += 1
+    # envs.append(env)
 
     import matplotlib.pyplot as plt
     for env in envs:
-        plt.plot(env.sim.t_sensor, env.sim.sensor_out)
-    # plt.plot(env.sim.t_sensor, env.w)
+        plt.plot(env.sim.t, env.sim._sim_out)
+    plt.plot(env.sim.t, env.w)
     plt.grid()
     plt.show()
