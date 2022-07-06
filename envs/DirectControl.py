@@ -207,7 +207,7 @@ class DirectController(gym.Env, abc.ABC):
 
     def _obs_errors_with_vel(self):
         """
-        Create observation consisting of: system error (e), system input (u) and their derivations.
+        Create observation consisting of: system error (e), derivation of error (e_dot) and system input (u_dot).
         :return:
         """
         set_points = np.array(list(self.last_w))
