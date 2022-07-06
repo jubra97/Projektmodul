@@ -2,6 +2,7 @@ import os
 import pathlib
 import wandb
 import shutil
+import sys
 
 import numpy as np
 import torch as th
@@ -13,16 +14,19 @@ from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from wandb.integration.sb3 import WandbCallback
 
+print(sys.path.insert(1, os.path.join(sys.path[0], '..')))
 import custom_policy
 from CustomEvalCallback import CustomEvalCallback
 from ActionNoiseCallback import ActionNoiseCallback
 from envs.DirectControllerSim import DirectControllerSim
 
 
+
+
 if __name__ == "__main__":
     hyperparameter_defaults = {
         "oscillation_pen_gain": 1,
-        "oscillation_pen_fun": "np.sqrt",
+        "oscillation_pen_fun": "np.sqaure",
         "error_pen_fun": "np.sqrt",
         "oscillation_pen_dependent_on_error": False,
         "discrete_bonus": True
@@ -46,10 +50,11 @@ if __name__ == "__main__":
         "function": "normal",  # add your own reward function if you want to
         "discrete_bonus": config["discrete_bonus"],
         "oscillation_pen_dependent_on_error": config["oscillation_pen_dependent_on_error"],
-        "oscillation_pen_fun": eval(config["error_pen_fun"]),
+        "oscillation_pen_fun": eval(config["oscillation_pen_fun"]),
         "oscillation_pen_gain": config["oscillation_pen_gain"],
         "error_pen_fun": eval(config["error_pen_fun"]),
     }
+    print(reward_options)
 
     env_options = {
         "model_freq": 12_000,  # sim with 12_000 Hz

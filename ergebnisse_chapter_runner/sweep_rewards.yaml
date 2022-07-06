@@ -19,12 +19,12 @@ parameters:
   oscillation_pen_fun:
     values:
       - np.sqrt
-      - np.sqaure
+      - np.square
       - np.abs
   error_pen_fun:
     values:
       - np.sqrt
-      - np.sqaure
+      - np.square
       - np.abs
   oscillation_pen_dependent_on_error:
     values:
