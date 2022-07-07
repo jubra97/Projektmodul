@@ -7,7 +7,7 @@ import os
 from envs.DirectControllerSim import DirectControllerSim
 from stable_baselines3 import DDPG
 
-start_path = r"G:\Projektmodul_Julius_Valentin\wandb_base_config"
+start_path = r"C:\AktiveProjekte\Python\Projektmodul2\wandb_base_config"
 
 if __name__ == "__main__":
     envs = []
@@ -63,49 +63,65 @@ if __name__ == "__main__":
         lower_bound = 0.5 - 0.5 * 0.05
         upper_bound = 0.5 + 0.5 * 0.05
         # go backwards through sim._sim_out and find first index out of bounds
-        index_lower = np.argmax(np.array(env.sim._sim_out)[::-1] < lower_bound)
-        index_lower = index_lower if index_lower > 0 else env.sim.n_sample_points
-        index_upper = np.argmax(np.array(env.sim._sim_out)[::-1] > upper_bound)
-        index_upper = index_upper if index_upper > 0 else env.sim.n_sample_points
+        index_lower_out = list(np.array(env.sim._sim_out)[::-1] < lower_bound)
+        index_lower = 0
+        try:
+            index_lower = index_lower_out.index(True)
+        except ValueError:
+            index_lower = env.sim.n_sample_points
+
+        index_upper_out = list(np.array(env.sim._sim_out)[::-1] > upper_bound)
+        index_upper = 0
+        try:
+            index_upper = index_upper_out.index(True)
+        except ValueError:
+            index_upper = env.sim.n_sample_points
+        # index_lower = list(np.array(env.sim._sim_out)[::-1] < lower_bound).index(True)
+        # index_lower = index_lower if index_lower > 0 else env.sim.n_sample_points
+        # index_upper = list(np.array(env.sim._sim_out)[::-1] > upper_bound).index(True)
+        # index_upper = index_upper if index_upper > 0 else env.sim.n_sample_points
         last_out_of_bounds = min([index_lower, index_upper])
-        if last_out_of_bounds >= (env.sim.n_sample_points - start_time):
-            setting_time = 1
-        else:
-            setting_time = (env.sim.n_sample_points - last_out_of_bounds - start_time) / env.sim.model_freq
+
+        setting_time = (env.sim.n_sample_points - last_out_of_bounds - start_time) / env.sim.model_freq
+
+        # if last_out_of_bounds >= (env.sim.n_sample_points - start_time):
+        #     setting_time = 1
+        # else:
+        #     setting_time = env.sim.n_sample_points - last_out_of_bounds - start_time) / env.sim.model_freq
         print(setting_time)
         print(np.mean(np.sqrt(np.square(np.array(env.w) - np.array(env.sim._sim_out)))))
 
 
-    # env = DirectControllerSim(**env_options)
-    # for _ in range(1):
-    #     time.sleep(0.5)
-    #     done = False
-    #     obs = env.reset(step_start=0, step_end=0.5, step_slope=0)
-    #     actions = [0] * 50 + [0.25] + [0] * 99
-    #     i = 0
-    #     while not done:
-    #         action, _ = model.predict(obs)
-    #         obs, reward, done, info = env.step([actions[i]])
-    #         i += 1
-    # envs.append(env)
+# env = DirectControllerSim(**env_options)
+# for _ in range(1):
+#     time.sleep(0.5)
+#     done = False
+#     obs = env.reset(step_start=0, step_end=0.5, step_slope=0)
+#     actions = [0] * 50 + [0.25] + [0] * 99
+#     i = 0
+#     while not done:
+#         action, _ = model.predict(obs)
+#         obs, reward, done, info = env.step([actions[i]])
+#         i += 1
+# envs.append(env)
 
-    import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
-    font = {'size': 14}
+font = {'size': 14}
 
-    plt.rc('font', **font)
-    plt.rcParams["figure.figsize"] = (9, 5)
+plt.rc('font', **font)
+plt.rcParams["figure.figsize"] = (9, 5)
 
-    i = 0
-    plt.plot(env.sim.t, env.w, label="w")
-    for env in envs:
-        i += 1
-        plt.plot(env.sim.t, env.sim._sim_out, label=f"y; run: {i}")
+i = 0
+plt.plot(env.sim.t, env.w, label="w")
+for env in envs:
+    i += 1
+    plt.plot(env.sim.t, env.sim._sim_out, label=f"y; run: {i}")
 
-    plt.grid()
-    plt.xlabel("Time [s]")
-    plt.ylabel("Normalized Force [N]")
-    plt.xlim([0, 1.5])
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+plt.grid()
+plt.xlabel("Time [s]")
+plt.ylabel("Normalized Force [N]")
+plt.xlim([0, 1.5])
+plt.legend()
+plt.tight_layout()
+plt.show()
