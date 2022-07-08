@@ -60,8 +60,8 @@ policy_options = {
 }
 
 rl_options = {
-    "save_path": "baseline_test",
-    "tensorboard_log_name": "tensorboard_baseline_test",
+    "save_path": "abc",
+    "tensorboard_log_name": "tensorboard_abc",
     "cpu_cores": 3,
     "timesteps": 300_000,
     "action_noise": (0.1, 0.0003, 250_000)
