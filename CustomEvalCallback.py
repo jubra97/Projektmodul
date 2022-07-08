@@ -106,7 +106,7 @@ class CustomEvalCallback(BaseCallback):
         #     plt.close()
         #     # first_layer_weight = self.model.actor.mu._modules["0"].weight
         #     # self.logger.output_formats[1].writer.add_histogram("test", first_layer_weight, self.n_calls)
-        if self.early_stopping_counter < 3 and self.early_stopping:
+        if self.early_stopping_counter < 3 or not self.early_stopping:
             return True
         else:
             return False
