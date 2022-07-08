@@ -3,7 +3,8 @@ import pathlib
 from collections import deque
 
 import control
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
+from matplotlib import figure
 import numpy as np
 
 from Simulation.OpenLoopSim import OpenLoopSim
@@ -180,7 +181,10 @@ class DirectControllerSim(DirectController):
         Crate a plot for tensorboard while training and afterwards for evaluation.
         :return:
         """
-        fig, ax = plt.subplots(2, 3, figsize=(20, 12))
+        fig = figure.Figure(figsize=(20, 12))
+        ax = fig.subplots(2, 3)
+
+        # fig, ax = plt.subplots(2, 3, figsize=(20, 12))
         timestamps = np.linspace(0, self.last_t[-1], int(self.last_t[-1] * self.output_freq))
 
         ax[0][0].set_title("Obs")
@@ -302,8 +306,8 @@ class DirectControllerSim(DirectController):
                     ax[0][2].text(0.1, 0.9, f"Rise Time: {rise_time}", transform=ax[0][2].transAxes)
                     ax[0][2].text(0.1, 0.7, f"Setting Time: {setting_time}", transform=ax[0][2].transAxes)
                 ax[0][2].text(0.1, 0.5, f"Mean RMSE: {np.mean(rmse_episode)}", transform=ax[0][2].transAxes)
-                plt.savefig(f"{folder_name}\\{i}_{step}_{slope}.png")
-                plt.close()
+                fig.savefig(f"{folder_name}\\{i}_{step}_{slope}.png")
+                # fig.close()
                 i += 1
 
         mean_episode_reward = np.sum(rewards) / self.n_episodes

@@ -10,7 +10,7 @@ extra_infos = []
 for dir in dirs:
     name = f"{main_path}\\{dir}"
     try:
-        with open(name + "\\extra_info.json", "r") as f:
+        with open(name + "\\custom_eval\\extra_info.json", "r") as f:
             tmp = json.load(f)
             tmp["name"] = dir
             extra_infos.append(tmp)
