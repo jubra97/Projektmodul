@@ -306,8 +306,10 @@ class ControllerParamsSim(ControllerParams):
         ax[1][2].text(0.5, 0.9, f"Smoothness: {sm}", transform=ax[1][2].transAxes)
         ax[1][2].grid()
 
+        rmse_episode = np.mean(np.sqrt(np.square(np.array(self.w) - np.array(self.sim._sim_out[1, :]))))
+
         fig.tight_layout()
-        return fig, ax
+        return fig, ax, rmse_episode, sm
 
     def eval(self, model, folder_name, options_dict=None):
         """
@@ -367,16 +369,22 @@ class ControllerParamsSim(ControllerParams):
                     lower_bound = step - step * 0.05
                     upper_bound = step + step * 0.05
                     # go backwards through sim._sim_out and find first index out of bounds
-                    index_lower = np.argmax(np_sim_out[::-1] < lower_bound)
-                    index_lower = index_lower if index_lower > 0 else self.sim.n_sample_points
-                    index_upper = np.argmax(np_sim_out[::-1] > upper_bound)
-                    index_upper = index_upper if index_upper > 0 else self.sim.n_sample_points
+                    index_lower_out = list(np.array(self.sim._sim_out)[::-1] < lower_bound)
+                    index_lower = 0
+                    try:
+                        index_lower = index_lower_out.index(True)
+                    except ValueError:
+                        index_lower = self.sim.n_sample_points
+
+                    index_upper_out = list(np.array(self.sim._sim_out)[::-1] > upper_bound)
+                    index_upper = 0
+                    try:
+                        index_upper = index_upper_out.index(True)
+                    except ValueError:
+                        index_upper = self.sim.n_sample_points
                     last_out_of_bounds = min([index_lower, index_upper])
-                    if last_out_of_bounds >= (self.sim.n_sample_points - start_time):
-                        setting_time = 1
-                    else:
-                        setting_time = (
-                                                   self.sim.n_sample_points - last_out_of_bounds - start_time) / self.sim.model_freq
+
+                    setting_time = (self.sim.n_sample_points - last_out_of_bounds - start_time) / self.sim.model_freq
                     setting_times.append(setting_time)
 
                     ax[0][2].text(0.1, 0.9, f"Rise Time: {rise_time}", transform=ax[0][2].transAxes)

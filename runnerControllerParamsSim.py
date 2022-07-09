@@ -29,7 +29,7 @@ reward_options = {
     "discrete_bonus": True,
     "oscillation_pen_dependent_on_error": False,
     "oscillation_pen_fun": np.sqrt,
-    "oscillation_pen_gain": 10000,
+    "oscillation_pen_gain": 10,
     "error_pen_fun": None,
 }
 
@@ -39,8 +39,8 @@ env_options = {
     "output_freq": 100,  # update output with 100 Hz
     "observation_kwargs": observation_options,
     "reward_kwargs": reward_options,
-    "p_range": 100,
-    "i_range": 20,
+    "p_range": 0.1,
+    "i_range": 100,
     "d_range": 0,
     "log": False,  # don't log for training envs
 }
@@ -58,8 +58,8 @@ policy_options = {
 }
 
 rl_options = {
-    "save_path": "baseline_test",
-    "tensorboard_log_name": "tensorboard_baseline_test",
+    "save_path": "abc_controller_params",
+    "tensorboard_log_name": "tensorboard_abc_controller_params",
     "cpu_cores": 3,
     "timesteps": 300_000,
     "action_noise": (0.1, 0.0003, 250_000)
