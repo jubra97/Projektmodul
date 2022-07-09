@@ -1,0 +1,28 @@
+command:
+  - venv\Scripts\python.exe
+  - ${program}
+  - ${args}
+program: ergebnisse_chapter_runner\runnerDirectControlSimRewardsWandB.py
+method: grid
+
+parameters:
+  oscillation_pen_gain:
+    values:
+      - 0
+      - 0.001
+      - 0.1
+      - 1
+      - 10
+  oscillation_pen_fun:
+    values:
+      - np.sqrt
+      - np.abs
+  error_pen_fun:
+    values:
+      - np.square
+      - np.abs
+  discrete_bonus:
+    values:
+      - true
+      - false
+

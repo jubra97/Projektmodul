@@ -22,19 +22,19 @@ observation_options = {
     "average_length": 1,  # use average of last 5 sensor data points
     "obs_config": {
         "d": True,
-        "i": True,
-        "input_vel": True,
-        "output_vel": True,
+        # "i": True,
+        # "input_vel": True,
+        # "output_vel": True,
     },
 }
 
 # for more information look at the docstring of DirectControl.create_reward()
 reward_options = {
     "function": "normal",  # add your own reward function if you want to
-    "discrete_bonus": True,
+    "discrete_bonus": False,
     "oscillation_pen_dependent_on_error": False,
     "oscillation_pen_fun": np.sqrt,
-    "oscillation_pen_gain": 25,
+    "oscillation_pen_gain": 10,
     "error_pen_fun": None,
 }
 
@@ -48,14 +48,14 @@ env_options = {
 }
 
 policy_options = {
-    "actor_layers": 0,
-    "actor_layer_width": 10,  # amount of neurons per layer in the hidden layers
-    "actor_activation_fun": th.nn.Tanh(),
+    "actor_layers": 2,
+    "actor_layer_width": 100,  # amount of neurons per layer in the hidden layers
+    "actor_activation_fun": th.nn.ReLU(),
     "actor_end_activation_fun": th.nn.Tanh(),  # must be a activation function that clips the value between (-1, 1)
     "actor_bias": False,
     "critic_layers": 2,
-    "critic_layer_width": 400,  # amount of neurons per layer in the hidden layers
-    "critic_activation_fun": th.nn.Tanh(),
+    "critic_layer_width": 200,  # amount of neurons per layer in the hidden layers
+    "critic_activation_fun": th.nn.ReLU(),
     "critic_bias": True,
 }
 
