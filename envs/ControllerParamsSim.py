@@ -41,7 +41,7 @@ class ControllerParamsSim(ControllerParams):
             else:
                 self.open_loop_sys = sys
         else:
-            self.open_loop_sys = control.tf2ss(control.tf([1], [0.003, 0.1, 1]))  # pt2 of dms
+            self.open_loop_sys = control.tf2ss(control.tf([3.452391113940120e+04], [1,46.629595161020170,3.495142304939126e+04]))  # pt2 of dms
         # create simulation object with an arbitrary tf.
         self.sim = IOSim(None, model_freq, sensor_freq, output_freq, action_scale=1, obs_scale=1, simulation_time=1.5)
         # self.open_loop_gain = (self.open_loop_sys.C @ np.linalg.inv(-self.open_loop_sys.A) @ self.open_loop_sys.B + self.open_loop_sys.D)[0][0]
