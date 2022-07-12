@@ -5,7 +5,8 @@ import numpy as np
 
 class ActionNoiseCallback(BaseCallback):
     """
-    Callback for evaluating an agent.
+    Callback for linear decreasing action noise with:
+    max(end_noise, start_noise - (start_noise - end_noise) / steps * current_step)
 
     .. warning::
 
@@ -13,21 +14,10 @@ class ActionNoiseCallback(BaseCallback):
       will effectively correspond to ``n_envs`` steps.
       To account for that, you can use ``eval_freq = max(eval_freq // n_envs, 1)``
 
-    :param eval_env: The environment used for initialization
-    :param callback_on_new_best: Callback to trigger
-        when there is a new best model according to the ``mean_reward``
-    :param n_eval_episodes: The number of episodes to test the agent
-    :param eval_freq: Evaluate the agent every ``eval_freq`` call of the callback.
-    :param log_path: Path to a folder where the evaluations (``evaluations.npz``)
-        will be saved. It will be updated at each evaluation.
-    :param best_model_save_path: Path to a folder where the best model
-        according to performance on the eval env will be saved.
-    :param deterministic: Whether the evaluation should
-        use a stochastic or deterministic actions.
-    :param render: Whether to render or not the environment during evaluation
+    :param start_noise: start_noise
+    :param end_noise: noise if linear decrease stops
+    :param steps: steps from start to end noise
     :param verbose:
-    :param warn: Passed to ``evaluate_policy`` (warns if ``eval_env`` has not been
-        wrapped with a Monitor wrapper)
     """
 
     def __init__(
@@ -35,9 +25,6 @@ class ActionNoiseCallback(BaseCallback):
             start_noise,
             end_noise,
             steps,
-            n_eval_episodes: int = 1,
-            eval_freq: int = 10000,
-            deterministic: bool = True,
             verbose: int = 1,
     ):
         super().__init__(verbose=verbose)
