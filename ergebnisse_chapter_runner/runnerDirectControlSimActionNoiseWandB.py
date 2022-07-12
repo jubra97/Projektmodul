@@ -2,6 +2,7 @@ import os
 import pathlib
 import wandb
 import shutil
+import sys
 
 import numpy as np
 import torch as th
@@ -13,6 +14,7 @@ from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckA
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from wandb.integration.sb3 import WandbCallback
 
+print(sys.path.insert(1, os.path.join(sys.path[0], '..')))
 import custom_policy
 from CustomEvalCallback import CustomEvalCallback
 from ActionNoiseCallback import ActionNoiseCallback
