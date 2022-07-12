@@ -23,7 +23,8 @@ observation_options = {
     "obs_config": {
         "d": True,
         # "i": True,
-        # "input_vel": True,
+        "input_vel": True,
+        # 'input': True,
         # "output_vel": True,
     },
 }
@@ -31,7 +32,7 @@ observation_options = {
 # for more information look at the docstring of DirectControl.create_reward()
 reward_options = {
     "function": "normal",  # add your own reward function if you want to
-    "discrete_bonus": False,
+    "discrete_bonus": True,
     "oscillation_pen_dependent_on_error": False,
     "oscillation_pen_fun": np.sqrt,
     "oscillation_pen_gain": 0.1,
@@ -72,7 +73,7 @@ params_dict = {"env_options": env_options,
                "rl_options": rl_options}
 
 if __name__ == "__main__":
-    for _ in range(3):
+    for _ in range(1):
         # check for existing entries and add a new one
         pathlib.Path(rl_options["save_path"]).mkdir(exist_ok=True)
         dir_entries = os.listdir(rl_options["save_path"])

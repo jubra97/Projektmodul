@@ -27,6 +27,9 @@ class ControllerParams(gym.Env, abc.ABC):
         :param log: Log the simulation outcomes.
         :param output_freq: Frequency for u update.
         :param sensor_freq: Frequency of new sensor update data.
+        :param p_range: Scale P-Value between 0 and p_range; If 0 or None no proportional gain is used
+        :param i_range: Scale I-Value between 0 and i_range; If 0 or None no integral gain is used
+        :param d_range: Scale D-Value between 0 and d_range; If 0 or None no derivative gain is used
         :param reward_kwargs: Dict with extra options for the reward function
         :param observation_kwargs: Dict with extra option for the observation function
         """
@@ -230,7 +233,7 @@ class ControllerParams(gym.Env, abc.ABC):
     def _obs_errors_with_vel(self):
         """
         Create observation consisting of: system error (e), system input (u) and their derivations.
-        :return:
+        :return: Observation
         """
         set_points = np.array(list(self.last_w))
         system_outputs = np.array(list(self.last_y))
@@ -423,23 +426,5 @@ class ControllerParams(gym.Env, abc.ABC):
         :return:
         """
         ...
-
-    def eval_fft(self):
-        """
-        Calculate fft of the action signal for one episode. Also compute the action smoothness value in
-        https: // arxiv.org / pdf / 2012.06644.pdf.
-        :return:
-        """
-        N = 150
-        T = 1 / 100
-
-        actions = self.sim._sim_out[2, :]
-        actions = actions - np.mean(actions)
-        actions_fft = fft(actions)
-        actions_fftfreq = fftfreq(N, T)[:N // 2]
-
-        # https: // arxiv.org / pdf / 2012.06644.pdf Smoothness Measurement
-        sm = (2 / actions_fftfreq.shape[0]) * np.sum(actions_fftfreq * 2 / N * np.abs(actions_fft[0:N // 2]))
-        return actions_fft, actions_fftfreq, N, sm
 
 
