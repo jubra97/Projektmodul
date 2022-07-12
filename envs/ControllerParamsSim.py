@@ -25,16 +25,21 @@ class ControllerParamsSim(ControllerParams):
                  observation_kwargs=None,
                  ):
         """
-        Create a gym environment for optimizing the PI(D) parameters of a PI(D) controller in every time step. Here the
-        parameters are determined by simulating a SISO TF or SS system with them.
+        Create a gym environment for optimizing the PI(D) parameters of a PI(D) controller in every "output_freq" time step.
+         Here the parameters are determined by simulating a SISO TF or SS system with them.
         :param log: Log the simulation outcomes.
         :param model_freq: Frequency of simulation update steps.
         :param output_freq: Frequency for u update.
         :param sensor_freq: Frequency of new sensor update data.
         :param sys: Open Loop system/plant to be simulated. Use a pre-defined system if None.
+        :param p_range: Scale P-Value between 0 and p_range; If 0 or None no proportional gain is used
+        :param i_range: Scale I-Value between 0 and i_range; If 0 or None no integral gain is used
+        :param d_range: Scale D-Value between 0 and d_range; If 0 or None no derivative gain is used
         :param reward_kwargs: Dict with extra options for the reward function
         :param observation_kwargs: Dict with extra option for the observation function
         """
+
+        # set sys
         if sys:
             if isinstance(sys, control.TransferFunction):
                 self.open_loop_sys = control.tf2ss(sys)
@@ -58,6 +63,8 @@ class ControllerParamsSim(ControllerParams):
 
         self.first_step = True
         self.last_p = 1
+        self.last_i = 1
+        self.last_d = 1
 
     def custom_reset(self, step_start=None, step_end=None, step_slope=None, custom_w=None):
         """
@@ -217,28 +224,20 @@ class ControllerParamsSim(ControllerParams):
         if i == 0:
             i = 1e-20
         controller_p = control.tf([p], [1])
-        if i is not None:
-            controller_i = control.tf([i], [1, 0])
-        else:
-            controller_i = 0
         if d is not None:
             controller_d = control.tf([d, 0], [1e-9, 1])
         else:
             controller_d = control.tf([0], [1])
 
-        controller = controller_p + controller_i + controller_d
-
-        # p = p * self.sim.action_scale
-        # i = i * self.sim.action_scale
         self.last_p = p
         self.last_i = i
         self.last_d = d
-        # print(controller)
-        # controller = control.tf2ss(controller)
+
         if self.first_step:
             self.sim.last_state[0, 0] = self.w[0, 0] / (i * self.open_loop_gain)
             self.first_step = False
 
+        # create io system for the controller
         p_controller = control.LinearIOSystem(controller_p, inputs="e", outputs="u_p", name="controller_p")
         i_controller_gain = control.LinearIOSystem(control.tf([i], [1]), inputs="e", outputs="e_i", name="controller_i_gain")
         i_controller_int = control.LinearIOSystem(control.tf([1], [1, 0]), inputs="e_i", outputs="u_i", name="controller_i_int")
@@ -248,20 +247,18 @@ class ControllerParamsSim(ControllerParams):
         controller = control.interconnect([p_controller, i_controller, d_controller, controller_sum], name="controller",
                                           inplist=["e"], outputs=["u"], inputs=["e"], outlist=["u"])
 
+        # create open loop system
         io_open_loop = control.LinearIOSystem(self.open_loop_sys, inputs="u", outputs="y", name="open_loop")
         # io_controller = control.LinearIOSystem(controller, inputs="e", outputs="u", name="controller")
         w_y_comp = control.summing_junction(inputs=["w", "-y_noisy"], output="e")
         y_noise = control.summing_junction(inputs=["y", "noise"], outputs="y_noisy")
 
+        # close the loop
         closed_loop = control.interconnect([w_y_comp, io_open_loop, y_noise, controller],
                                            name="closed_loop",
                                            inplist=["w", "noise"],
                                            outlist=["y", "y_noisy", "u", "e"])
-        # print(closed_loop.A)
-        # print(closed_loop.B)
-        # print(closed_loop.C)
-        # print(closed_loop.D)
-        return closed_loop#
+        return closed_loop
 
     def create_eval_plot(self):
         """
@@ -346,7 +343,7 @@ class ControllerParamsSim(ControllerParams):
                     actions.append(action)
                 _, _, _, smoothness = self.eval_fft()
                 sms.append(smoothness)
-                fig, ax = self.create_eval_plot()
+                fig, ax, _, _ = self.create_eval_plot()
 
                 np_sim_out = np.array(self.sim._sim_out)
 
@@ -407,3 +404,21 @@ class ControllerParamsSim(ControllerParams):
         print(f"Eval Info: RMSE: {np.mean(rmse)} --- Smoothness: {np.mean(sms)}")
 
         return extra_info
+
+    def eval_fft(self):
+        """
+        Calculate fft of the action signal for one episode. Also compute the action smoothness value in
+        https: // arxiv.org / pdf / 2012.06644.pdf.
+        :return:
+        """
+        N = 150
+        T = 1 / 100
+
+        actions = self.sim._sim_out[2, :]
+        actions = actions - np.mean(actions)
+        actions_fft = fft(actions)
+        actions_fftfreq = fftfreq(N, T)[:N // 2]
+
+        # https: // arxiv.org / pdf / 2012.06644.pdf Smoothness Measurement
+        sm = (2 / actions_fftfreq.shape[0]) * np.sum(actions_fftfreq * 2 / N * np.abs(actions_fft[0:N // 2]))
+        return actions_fft, actions_fftfreq, N, sm
