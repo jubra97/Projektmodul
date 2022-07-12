@@ -166,9 +166,6 @@ class ControllerParams(gym.Env, abc.ABC):
     def custom_reset(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def sensor_data_processing(self):
-        pass
-
     def _obs_raw_with_vel(self):
         """
         Create observation consisting of: set point (w), system output (y), system input (u) and their derivations.
@@ -215,18 +212,25 @@ class ControllerParams(gym.Env, abc.ABC):
         :return: Observation
         """
         history_length = self.observation_kwargs.get("history_length", 3)
+        use_u = self.observation_kwargs.get("use_u", True)
 
         # deque does not support slicing so a little workaround is needed, get newest "history_length" states
         w_history = list(itertools.islice(self.last_w, len(self.last_w) - history_length, len(self.last_w)))
         u_history = list(itertools.islice(self.last_u, len(self.last_u) - history_length, len(self.last_u)))
         y_history = list(itertools.islice(self.last_y, len(self.last_y) - history_length, len(self.last_y)))
 
-        obs = w_history + u_history + y_history
+        if use_u:
+            obs = w_history + u_history + y_history
+        else:
+            obs = w_history + y_history
 
         if self.log:
             self.episode_log["obs"]["last_set_points"].append(list(obs[0:history_length]))
-            self.episode_log["obs"]["last_system_inputs"].append(list(obs[history_length:history_length * 2]))
-            self.episode_log["obs"]["last_system_outputs"].append(list(obs[history_length * 2:history_length * 3]))
+            if use_u:
+                self.episode_log["obs"]["last_system_inputs"].append(list(obs[history_length:history_length * 2]))
+                self.episode_log["obs"]["last_system_outputs"].append(list(obs[history_length * 2:history_length * 3]))
+            else:
+                self.episode_log["obs"]["last_system_outputs"].append(list(obs[history_length:history_length * 2]))
 
         return np.array(obs)
 
