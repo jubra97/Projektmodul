@@ -87,7 +87,7 @@ class DirectControllerOnlineConnection:
 
     def update_obs(self, notification, data):
         """
-        Callback when new data is received. Save data two class variables. The received data possesses a field with
+        Callback when new data is received. Save data to class variables. The received data possesses a field with
         timestamps. Those are used two only save new data.
         :param notification:
         :param data:
