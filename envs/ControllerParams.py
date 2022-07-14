@@ -27,6 +27,9 @@ class ControllerParams(gym.Env, abc.ABC):
         :param log: Log the simulation outcomes.
         :param output_freq: Frequency for u update.
         :param sensor_freq: Frequency of new sensor update data.
+        :param p_range: Scale P-Value between 0 and p_range; If 0 or None no proportional gain is used
+        :param i_range: Scale I-Value between 0 and i_range; If 0 or None no integral gain is used
+        :param d_range: Scale D-Value between 0 and d_range; If 0 or None no derivative gain is used
         :param reward_kwargs: Dict with extra options for the reward function
         :param observation_kwargs: Dict with extra option for the observation function
         """
@@ -163,9 +166,6 @@ class ControllerParams(gym.Env, abc.ABC):
     def custom_reset(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def sensor_data_processing(self):
-        pass
-
     def _obs_raw_with_vel(self):
         """
         Create observation consisting of: set point (w), system output (y), system input (u) and their derivations.
@@ -212,25 +212,32 @@ class ControllerParams(gym.Env, abc.ABC):
         :return: Observation
         """
         history_length = self.observation_kwargs.get("history_length", 3)
+        use_u = self.observation_kwargs.get("use_u", True)
 
         # deque does not support slicing so a little workaround is needed, get newest "history_length" states
         w_history = list(itertools.islice(self.last_w, len(self.last_w) - history_length, len(self.last_w)))
         u_history = list(itertools.islice(self.last_u, len(self.last_u) - history_length, len(self.last_u)))
         y_history = list(itertools.islice(self.last_y, len(self.last_y) - history_length, len(self.last_y)))
 
-        obs = w_history + u_history + y_history
+        if use_u:
+            obs = w_history + u_history + y_history
+        else:
+            obs = w_history + y_history
 
         if self.log:
             self.episode_log["obs"]["last_set_points"].append(list(obs[0:history_length]))
-            self.episode_log["obs"]["last_system_inputs"].append(list(obs[history_length:history_length * 2]))
-            self.episode_log["obs"]["last_system_outputs"].append(list(obs[history_length * 2:history_length * 3]))
+            if use_u:
+                self.episode_log["obs"]["last_system_inputs"].append(list(obs[history_length:history_length * 2]))
+                self.episode_log["obs"]["last_system_outputs"].append(list(obs[history_length * 2:history_length * 3]))
+            else:
+                self.episode_log["obs"]["last_system_outputs"].append(list(obs[history_length:history_length * 2]))
 
         return np.array(obs)
 
     def _obs_errors_with_vel(self):
         """
         Create observation consisting of: system error (e), system input (u) and their derivations.
-        :return:
+        :return: Observation
         """
         set_points = np.array(list(self.last_w))
         system_outputs = np.array(list(self.last_y))
@@ -423,23 +430,5 @@ class ControllerParams(gym.Env, abc.ABC):
         :return:
         """
         ...
-
-    def eval_fft(self):
-        """
-        Calculate fft of the action signal for one episode. Also compute the action smoothness value in
-        https: // arxiv.org / pdf / 2012.06644.pdf.
-        :return:
-        """
-        N = 150
-        T = 1 / 100
-
-        actions = self.sim._sim_out[2, :]
-        actions = actions - np.mean(actions)
-        actions_fft = fft(actions)
-        actions_fftfreq = fftfreq(N, T)[:N // 2]
-
-        # https: // arxiv.org / pdf / 2012.06644.pdf Smoothness Measurement
-        sm = (2 / actions_fftfreq.shape[0]) * np.sum(actions_fftfreq * 2 / N * np.abs(actions_fft[0:N // 2]))
-        return actions_fft, actions_fftfreq, N, sm
 
 

@@ -19,8 +19,11 @@ class DirectControllerOnline(DirectController):
         """
         Create a gym environment to directly control the actuating value (u) the given online system.
         :param online_sys: Connection to the online system.
-        :param sample_freq:
         :param log: Log data?
+        :param output_freq: Frequency for u update.
+        :param sensor_freq: Frequency of new sensor update data.
+        :param reward_kwargs: Dict with extra options for the reward function
+        :param observation_kwargs: Dict with extra option for the observation function
         """
 
         self.online_system = online_sys
@@ -101,7 +104,6 @@ class DirectControllerOnline(DirectController):
         obs = self.observation_function()
         reward = self.reward_function()
 
-
         if self.last_t[-1] > 5 and self.timesteps_last_episode > 1:  # one episode is 5 seconds long
             done = True
             if self.log:
@@ -118,6 +120,7 @@ class DirectControllerOnline(DirectController):
         Update values for observation/reward with newest online values.
         :return:
         """
+        # try update data until mutex is free and data some data is already written
         retry = True
         while retry:
             with self.online_system.ads_buffer_mutex:
@@ -164,7 +167,6 @@ class DirectControllerOnline(DirectController):
         ax[1][1].legend()
 
         rmse_episode = np.mean(np.sqrt(np.square(np.array(self.episode_log["function"]["w"]) - np.array(self.episode_log["function"]["y"]))))
-
 
         fig.tight_layout()
         return fig, ax, rmse_episode, None

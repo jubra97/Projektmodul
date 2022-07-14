@@ -26,8 +26,8 @@ from envs.DirectControllerSim import DirectControllerSim
 if __name__ == "__main__":
     hyperparameter_defaults = {
         "oscillation_pen_gain": 1,
-        "oscillation_pen_fun": "np.square",
-        "error_pen_fun": "np.sqrt",
+        "oscillation_pen_fun": "np.sqrt",
+        "error_pen_fun": None,
         "oscillation_pen_dependent_on_error": False,
         "discrete_bonus": True
     }

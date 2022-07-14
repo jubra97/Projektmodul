@@ -7,6 +7,10 @@ from torch import nn
 from stable_baselines3.common.preprocessing import get_action_dim
 import torch as th
 
+"""
+Module for custom actor and critic network in sb3. Class CustomDDPGPolicy is the entry point.
+"""
+
 
 class CustomActor(Actor):
     """
@@ -19,7 +23,6 @@ class CustomActor(Actor):
         end_activation_fun = kwargs.pop("end_activation_fun")
         bias = kwargs.pop("bias")
         super(CustomActor, self).__init__(*args, **kwargs)
-        # Define custom network with Dropout
         # WARNING: it must end with a tanh activation to squash the output
         action_dim = get_action_dim(self.action_space)
 
@@ -125,17 +128,20 @@ class CustomDDPGPolicy(TD3Policy):
         :param args:
         :param kwargs:
         """
+
+        # Define the actor network with the following keywords
         actor_layers = kwargs.pop("actor_layers", 2)
         actor_layer_width = kwargs.pop("actor_layer_width", 10)
         actor_activation_fun = kwargs.pop("actor_activation_fun", nn.ReLU())
-        actor_end_activation_fun = kwargs.pop("actor_end_activation_fun", nn.Hardtanh())
+        actor_end_activation_fun = kwargs.pop("actor_end_activation_fun", nn.Tanh())
         actor_bias = kwargs.pop("actor_bias", False)
         self.custom_actor_kwargs = {"layers": actor_layers,
                                     "layer_width": actor_layer_width,
                                     "activation_fun": actor_activation_fun,
                                     "end_activation_fun": actor_end_activation_fun,
                                     "bias": actor_bias}
-        
+
+        # Define the critic network with the following keywords
         critic_layers = kwargs.pop("critic_layers", 2)
         critic_layer_width = kwargs.pop("critic_layer_width", 200)
         critic_activation_fun = kwargs.pop("critic_activation_fun", nn.Tanh())
@@ -144,6 +150,8 @@ class CustomDDPGPolicy(TD3Policy):
                                      "layer_width": critic_layer_width,
                                      "activation_fun": critic_activation_fun,
                                      "bias": critic_bias}
+
+        # super function uses the overwritten make_actor and make_critic functions
         super(CustomDDPGPolicy, self).__init__(*args, **kwargs)
 
     def make_actor(self, features_extractor: Optional[BaseFeaturesExtractor] = None) -> CustomActor:
