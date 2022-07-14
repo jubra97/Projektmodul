@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <Task Name="Task_COM" Id="{4a423228-985f-4390-8452-51b7dc621ea9}">
+    <!--CycleTime in micro seconds.-->
+    <CycleTime>125</CycleTime>
+    <Priority>61</Priority>
+    <PouCall>
+      <Name>BackgroundEL</Name>
+    </PouCall>
+    <TaskFBGuid>{b57d18ab-2041-49b0-80b5-a0ca9b31b2e3}</TaskFBGuid>
+    <Fb_init>{23717a4d-33c9-4e23-bba0-7a21141c2add}</Fb_init>
+    <Fb_exit>{4c9c68c4-48ef-4a48-847a-0f7a413f5aae}</Fb_exit>
+    <CycleUpdate>{c5d1b1a0-8609-40ee-939d-4445b29bc111}</CycleUpdate>
+    <PostCycleUpdate>{6c63cb77-6a65-4a50-b258-52f83642c3ea}</PostCycleUpdate>
+  </Task>
+</TcPlcObject>

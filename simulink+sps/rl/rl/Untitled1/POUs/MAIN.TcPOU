@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="MAIN" Id="{8e221c0c-6929-4d6f-aec3-e71f47158660}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+
+VAR
+	case_var : INT := 0;
+	Timer		: TON := (PT:=T#1MS);
+
+	fbReceive		: ReceiveString;
+	sReceivedString	: STRING;
+	sLastReceivedString: STRING;
+	sCleanedLastReceivedString: STRING;
+	bStringReceived	: BOOL;
+	bReceiveBusy	: BOOL;
+	bReceiveError	: BOOL;
+	eReceiveErrorID	: ComError_t;
+	bReceiveTimeout	: BOOL;
+	nReceiveCounter	: UDINT;
+	cleanedLastReceivedString: STRING;
+END_VAR
+
+VAR_OUTPUT
+	fWeightInKG AT %Q* : REAL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE case_var OF
+
+0:
+	Timer(IN:=TRUE);
+	IF Timer.Q THEN
+		Timer(IN:=FALSE); (* reset timer *)
+		case_var := 1;
+	END_IF
+
+1:
+fbReceive(
+	Prefix:= '',
+	Suffix:= '$0D$0A',
+	ReceivedString:= sReceivedString,
+	RXbuffer:= RxBufferEL,
+	StringReceived=> bStringReceived,
+	Busy=> bReceiveBusy,
+	Error=> ,
+	RxTimeout=> bReceiveTimeout );
+IF fbReceive.Error <> COMERROR_NOERROR THEN
+	eReceiveErrorID := fbReceive.Error;
+END_IF
+IF bStringReceived THEN
+	case_var := 0;
+	nReceiveCounter := nReceiveCounter + 1;
+	sLastReceivedString := sReceivedString;
+	sCleanedLastReceivedString := DELETE(sLastReceivedString, 2, 7);
+	fWeightInKG := STRING_TO_REAL(sCleanedLastReceivedString) / 1000;
+END_IF
+END_CASE]]></ST>
+    </Implementation>
+    <LineIds Name="MAIN">
+      <LineId Id="46" Count="0" />
+      <LineId Id="58" Count="1" />
+      <LineId Id="47" Count="2" />
+      <LineId Id="55" Count="1" />
+      <LineId Id="44" Count="1" />
+      <LineId Id="6" Count="2" />
+      <LineId Id="10" Count="9" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="20" Count="1" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="61" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

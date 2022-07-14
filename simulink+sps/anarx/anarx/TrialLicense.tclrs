@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<TcLicenseInfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.beckhoff.com/schemas/2011/11/TcLicenseInfo">
+	<LicenseInfo>
+		<SystemId>{7CE884D2-EB29-1790-2CFF-3CB8C5C291A3}</SystemId>
+		<IssueTime>2022-04-04T08:49:00</IssueTime>
+		<ExpireTime>2022-04-12T00:00:00</ExpireTime>
+		<LicenseKey>18c48ebb82081d82329d373c79175d3dce50ebe2e51aeaeebc1f4118f564fc145b3d292381b209dca54bda75854c04c60df44df524b6a65b4b3e65fda63bb071b47dc611888645fafcb172aadee2b595a511779087505965aedf118454afcff9fabdfccbd61a99f7c3e53f6a6697951b1a714511afa9463bdd97f578550e1f9800c4223633c5165fbe150cdb563786c9cab391909dacc55575d1e336cea5b686a14537595862f40693811b7e24fcd030cfef8b2b5be143971d3269197776e39cb59f9eefcc5c507e853372f2f0b8445ccde4869af4a79df6fa41cce749ac90695bf43f3342c6c3647fde90ebeb998460dfff91f53455145e3f6080ec17af7305</LicenseKey>
+		<License>
+			<LicenseId>{6425CC43-74BE-40EB-B459-8349B5AB98BD}</LicenseId>
+			<Name>TC3 Machine Learning Inference Engine</Name>
+			<OrderNo>TF3800</OrderNo>
+		</License>
+		<License>
+			<LicenseId>{3DA5D7CD-70F1-4894-B3AD-D35619CB19FA}</LicenseId>
+			<Name>TC3 Neural Network Inference Engine</Name>
+			<OrderNo>TF3810</OrderNo>
+		</License>
+		<License>
+			<LicenseId>{AD7F40C3-F160-4413-83E3-6B7656A795A2}</LicenseId>
+			<Name>TC3 C++ / MatSim</Name>
+			<OrderNo>TC1320</OrderNo>
+		</License>
+		<License>
+			<LicenseId>{4C256767-E6E6-4AF5-BD68-9F7ABAD0C200}</LicenseId>
+			<Name>TC3 ADS</Name>
+			<OrderNo>TC1000</OrderNo>
+		</License>
+		<License>
+			<LicenseId>{304D006A-8299-4560-AB79-438534B50288}</LicenseId>
+			<Name>TC3 C++</Name>
+			<OrderNo>TC1300</OrderNo>
+		</License>
+		<License>
+			<LicenseId>{3FF18E97-7754-401B-93FB-70544DE28A13}</LicenseId>
+			<Name>TC3 IO</Name>
+			<OrderNo>TC1100</OrderNo>
+		</License>
+	</LicenseInfo>
+</TcLicenseInfo>

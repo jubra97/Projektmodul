@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<TcLicenseInfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.beckhoff.com/schemas/2011/11/TcLicenseInfo">
+	<LicenseInfo>
+		<SystemId>{7CE884D2-EB29-1790-2CFF-3CB8C5C291A3}</SystemId>
+		<IssueTime>2022-07-10T13:30:00</IssueTime>
+		<ExpireTime>2022-07-18T00:00:00</ExpireTime>
+		<LicenseKey>2a32f112b0157dfc25e26faa2b179658a9d7141d49c40a594b899705940c0f054c663025521e5e87b1ed04c9c68d3a0b910ed8f912c91788d8ef6ccef5052cc3a9d2a0c63adc7eb6679d38fc98c4ed98698a0353dfe28d2e7b0614f6265dca8dec4019e15ebea223202e904554e99673f61eeb8c5fce9cca9bc3aec57cd2245fd66773e1fc9af24f835ccf671b85cc823557da2c53c05443171f5245762aa6ff865c80fa9f3301e80fc920753df9e2b40715c036e177324d6ead0b895a0ffad11a57d9a5cbfa3aaac1cf464d596040be590e841ef0784e75cb0fdc91026fbd25fa61118d11ce3bd0f84409bc972e02eef4e0266522c52fa1844d28b7c635a027</LicenseKey>
+		<License>
+			<LicenseId>{304D006A-8299-4560-AB79-438534B50288}</LicenseId>
+			<Name>TC3 C++</Name>
+			<OrderNo>TC1300</OrderNo>
+		</License>
+		<License>
+			<LicenseId>{4C256767-E6E6-4AF5-BD68-9F7ABAD0C200}</LicenseId>
+			<Name>TC3 ADS</Name>
+			<OrderNo>TC1000</OrderNo>
+		</License>
+		<License>
+			<LicenseId>{3FF18E97-7754-401B-93FB-70544DE28A13}</LicenseId>
+			<Name>TC3 IO</Name>
+			<OrderNo>TC1100</OrderNo>
+		</License>
+		<License>
+			<LicenseId>{AD7F40C3-F160-4413-83E3-6B7656A795A2}</LicenseId>
+			<Name>TC3 C++ / MatSim</Name>
+			<OrderNo>TC1320</OrderNo>
+		</License>
+		<License>
+			<LicenseId>{66689887-CCBD-452C-AC9A-039D997C6E66}</LicenseId>
+			<Name>TC3 PLC</Name>
+			<OrderNo>TC1200</OrderNo>
+		</License>
+		<License>
+			<LicenseId>{A19036CF-A53B-4E3A-99FF-023EF5C4798B}</LicenseId>
+			<Name>TC3 NC PTP Axis</Name>
+			<Instances>10</Instances>
+		</License>
+		<License>
+			<LicenseId>{520DE751-9DB6-47CB-8240-BD5C466E7E64}</LicenseId>
+			<Name>TC3 NC PTP</Name>
+			<OrderNo>TF5000</OrderNo>
+		</License>
+		<License>
+			<LicenseId>{73C71EBD-104A-4EE6-955D-ADE86A37EFC3}</LicenseId>
+			<Name>TC3 Target For Simulink</Name>
+			<OrderNo>TE1400</OrderNo>
+		</License>
+		<License>
+			<LicenseId>{6425CC43-74BE-40EB-B459-8349B5AB98BD}</LicenseId>
+			<Name>TC3 Machine Learning Inference Engine</Name>
+			<OrderNo>TF3800</OrderNo>
+		</License>
+		<License>
+			<LicenseId>{3DA5D7CD-70F1-4894-B3AD-D35619CB19FA}</LicenseId>
+			<Name>TC3 Neural Network Inference Engine</Name>
+			<OrderNo>TF3810</OrderNo>
+		</License>
+	</LicenseInfo>
+</TcLicenseInfo>
