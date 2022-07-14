@@ -102,7 +102,7 @@ class DirectControllerOnline(DirectController):
         reward = self.reward_function()
 
 
-        if self.last_t[-1] > 5 and self.timesteps_last_episode > 1:  # one episode is 3 seconds long
+        if self.last_t[-1] > 5 and self.timesteps_last_episode > 1:  # one episode is 5 seconds long
             done = True
             if self.log:
                 self.episode_log["function"]["y"] = self.online_system.last_y
@@ -163,5 +163,8 @@ class DirectControllerOnline(DirectController):
         ax[1][1].grid()
         ax[1][1].legend()
 
+        rmse_episode = np.mean(np.sqrt(np.square(np.array(self.episode_log["function"]["w"]) - np.array(self.episode_log["function"]["y"]))))
+
+
         fig.tight_layout()
-        return fig, ax
+        return fig, ax, rmse_episode, None

@@ -19,20 +19,21 @@ import utils
 
 observation_options = {
     # other possible options: "raw_with_vel", "raw_with_states", "error_with_states", "error_with_extra_components"
-    "function": "error_with_vel",
+    "function": "raw_with_vel",
     "average_length": 1,  # use average of last 5 sensor data points
-    # "obs_config": {
-    #     "d": True,
-    #     "input_vel": True,
-    #     "output_vel": True,
-    # }
+    "obs_config": {
+        "d": True,
+        "i": True,
+        "input_vel": True,
+        # "output_vel": True,
+    }
 }
 
 # for more information look at the docstring of DirectControl.create_reward()
 reward_options = {
     "function": "normal",  # add your own reward function if you want to
     "discrete_bonus": True,
-    "oscillation_pen_dependent_on_error": True,
+    "oscillation_pen_dependent_on_error": False,
     "oscillation_pen_fun": np.sqrt,
     "oscillation_pen_gain": 0.1,
     "error_pen_fun": None,
@@ -60,9 +61,9 @@ policy_options = {
 }
 
 rl_options = {
-    "save_path": "controller_test_online",
-    "tensorboard_log_name": "tensorboard_controller_test_online",
-    "timesteps": 100_000,
+    "save_path": "controller_test_online2",
+    "tensorboard_log_name": "tensorboard_controller_test_online2",
+    "timesteps": 50_000,
     "action_noise": 0.05,
 }
 

@@ -8,7 +8,7 @@ from envs.DirectControllerOnline import DirectControllerOnline
 from envs.DirectControllerOnlineConnection import DirectControllerOnlineConnection
 from stable_baselines3 import DDPG
 
-run_path = r"C:\Users\brandlju\PycharmProjects\Projektmodul\controller_test_online\25"
+run_path = r"C:\Users\brandlju\PycharmProjects\Projektmodul\controller_test_online2\0"
 
 if __name__ == "__main__":
     with open(f"{run_path}\\extra_info.json", 'r') as f:
@@ -37,13 +37,14 @@ if __name__ == "__main__":
     #     obs, reward, done, info = env.step()
 
     obss = []
-    for _ in range(20):
+    for _ in range(10):
         time.sleep(0.5)
         done = False
         obs = env.reset()
         while not done:
             action, _ = model.predict(obs)
             obs, reward, done, info = env.step(action)
+            done = False
 
     #         obss.append(obs[-2])
     #
