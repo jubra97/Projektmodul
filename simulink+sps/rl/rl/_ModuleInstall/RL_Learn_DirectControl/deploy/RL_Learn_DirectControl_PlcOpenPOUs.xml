@@ -2,7 +2,7 @@
 <!-- Beckhoff Automation GmbH & Co. KG -->
 <!-- TwinCAT Target for MATLAB/Simulink 1.2.1240.0-->
 <project xmlns="http://www.plcopen.org/xml/tc6_0200">
-  <fileHeader companyName="Beckhoff Automation GmbH &amp; Co. KG" companyURL="www.beckhoff.com" productName="TwinCAT 3 Function - TE1400" productVersion="1.2.1240" creationDateTime="2022-07-14T14:15:21" />
+  <fileHeader companyName="Beckhoff Automation GmbH &amp; Co. KG" companyURL="www.beckhoff.com" productName="TwinCAT 3 Function - TE1400" productVersion="1.2.1240" creationDateTime="2022-07-15T16:58:44" />
   <contentHeader name="TC3_TE1400_GeneratedModule_RL_Learn_DirectControl_FB">
     <coordinateInfo>
       <fbd>
@@ -1992,17 +1992,17 @@ SaveOnlineParametersForInit := SUPER^.SaveOnlineParametersForInit();
 bParametersVerified := false;
                     
 // set module class id for compatibility check
-clsId.Data1 := 16#22467769;
-clsId.Data2 := 16#dcb2;
-clsId.Data3 := 16#42c2;
-clsId.Data4[0] := 16#81;
-clsId.Data4[1] := 16#31;
-clsId.Data4[2] := 16#5f;
-clsId.Data4[3] := 16#9e;
-clsId.Data4[4] := 16#2c;
-clsId.Data4[5] := 16#61;
-clsId.Data4[6] := 16#bc;
-clsId.Data4[7] := 16#1e;
+clsId.Data1 := 16#66ddac3d;
+clsId.Data2 := 16#f3e3;
+clsId.Data3 := 16#4bd3;
+clsId.Data4[0] := 16#84;
+clsId.Data4[1] := 16#03;
+clsId.Data4[2] := 16#79;
+clsId.Data4[3] := 16#bf;
+clsId.Data4[4] := 16#58;
+clsId.Data4[5] := 16#4c;
+clsId.Data4[6] := 16#f7;
+clsId.Data4[7] := 16#9c;
 
 AssignClassId(clsId);
                     
@@ -12030,10 +12030,10 @@ stInitData.ModelParameters._R[9996] := 0.15472474018185081;
 stInitData.ModelParameters._R[9997] := 0.70343753151491384;
 stInitData.ModelParameters._R[9998] := 0.55134249842269067;
 stInitData.ModelParameters._R[9999] := 0.27327354697297446;
-stInitData.ModelParameters.WS_MAX_LENGTHS := -0.10000000000000001;
+stInitData.ModelParameters.WS_MAX_LENGTHS := 0.10000000000000001;
 stInitData.ModelParameters.WS_MAX_VEL_m_s := 0.40000000000000002;
-stInitData.ModelParameters.WS_MIN_LENGTHS := -0.20000000000000001;
-stInitData.ModelParameters.duration := 1;
+stInitData.ModelParameters.WS_MIN_LENGTHS := -0.14999999999999999;
+stInitData.ModelParameters.duration := 4;
 stInitData.ModelParameters.zero_poses := 3143153400;
 stInitData.ModelParameters.CompareToConstant1_const := 0.5;
 stInitData.ModelParameters.CompareToConstant2_const := 4.5;

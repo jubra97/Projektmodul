@@ -4592,9 +4592,9 @@
 				<Module Id="#x01010030" KeepUnrestoredLinks="2">
 					<Name>Object3 (RL_Learn_DirectControl)</Name>
 					<ImageId>1000</ImageId>
-					<TmcDesc GUID="{22467769-DCB2-42C2-8131-5F9E2C61BC1E}">
+					<TmcDesc GUID="{66DDAC3D-F3E3-4BD3-8403-79BF584CF79C}">
 						<Name>RL_Learn_DirectControl</Name>
-						<CLSID ClassFactory="RL_Learn_DirectControl" RealTimeInstantiable="true">{22467769-DCB2-42C2-8131-5F9E2C61BC1E}</CLSID>
+						<CLSID ClassFactory="RL_Learn_DirectControl" RealTimeInstantiable="true">{66DDAC3D-F3E3-4BD3-8403-79BF584CF79C}</CLSID>
 						<Info>
 							<TabExtension GUID="{BB6DDFDC-900F-473F-83FC-D83513217B55}"/>
 						</Info>
@@ -44729,7 +44729,7 @@
 									</SubItem>
 									<SubItem>
 										<Name>.WS_MAX_LENGTHS</Name>
-										<Value>-0.10000000000000001</Value>
+										<Value>0.10000000000000001</Value>
 									</SubItem>
 									<SubItem>
 										<Name>.WS_MAX_VEL_m_s</Name>
@@ -44737,11 +44737,11 @@
 									</SubItem>
 									<SubItem>
 										<Name>.WS_MIN_LENGTHS</Name>
-										<Value>-0.20000000000000001</Value>
+										<Value>-0.14999999999999999</Value>
 									</SubItem>
 									<SubItem>
 										<Name>.duration</Name>
-										<Value>1</Value>
+										<Value>4</Value>
 									</SubItem>
 									<SubItem>
 										<Name>.zero_poses</Name>
@@ -45245,8 +45245,8 @@
 									<BitOffs>1088</BitOffs>
 								</Symbol>
 								<Symbol CreateSymbol="true">
-									<Name>FromWorkspace2</Name>
-									<DisplayName><![CDATA[FromWorkspace2]]></DisplayName>
+									<Name>FromWorkspace</Name>
+									<DisplayName><![CDATA[FromWorkspace]]></DisplayName>
 									<BitSize>64</BitSize>
 									<BaseType GUID="{18071995-0000-0000-0000-00000000000E}">LREAL</BaseType>
 									<PTCID>#x82000090</PTCID>
@@ -46645,8 +46645,8 @@
 								<ContextId>0</ContextId>
 								<ByteSize>15</ByteSize>
 								<Symbol CreateSymbol="true">
-									<Name>FromWorkspace2_IWORK</Name>
-									<DisplayName><![CDATA[FromWorkspace2_IWORK]]></DisplayName>
+									<Name>FromWorkspace_IWORK</Name>
+									<DisplayName><![CDATA[FromWorkspace_IWORK]]></DisplayName>
 									<BitSize>32</BitSize>
 									<BaseType GUID="{18071995-0000-0000-0000-000000000009}">DINT</BaseType>
 									<PTCID>#x86000000</PTCID>
@@ -47012,7 +47012,7 @@
 							</Value>
 							<Value>
 								<Name>ModelParameters.Saturation3_UpperSat</Name>
-								<Value>1.79769313486232e+308</Value>
+								<Value>inf</Value>
 							</Value>
 							<Value>
 								<Name>ModelParameters.Saturation3_LowerSat</Name>
@@ -47032,7 +47032,7 @@
 							</Value>
 							<Value>
 								<Name>ModelParameters.Saturation4_UpperSat</Name>
-								<Value>1.79769313486232e+308</Value>
+								<Value>inf</Value>
 							</Value>
 							<Value>
 								<Name>ModelParameters.Saturation4_LowerSat</Name>
@@ -47068,7 +47068,7 @@
 							</Value>
 							<Value>
 								<Name>ModelParameters.Saturation5_UpperSat</Name>
-								<Value>1.79769313486232e+308</Value>
+								<Value>inf</Value>
 							</Value>
 							<Value>
 								<Name>ModelParameters.Saturation5_LowerSat</Name>
