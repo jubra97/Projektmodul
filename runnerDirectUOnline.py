@@ -50,7 +50,7 @@ observation_options = {
 reward_options = {
     "function": "normal",  # add your own reward function if you want to
     "discrete_bonus": True,
-    "oscillation_pen_dependent_on_error": True,
+    "oscillation_pen_dependent_on_error": False,
     "oscillation_pen_fun": np.sqrt,
     "oscillation_pen_gain": 0.1,
     "error_pen_fun": None,
@@ -83,8 +83,8 @@ policy_options = {
 # action_noise: use tuple with three entries (start, end, steps) for linear action noise and scalar for
 # constant action noise, use None if no action noise is needed
 rl_options = {
-    "save_path": "controller_test_online",
-    "tensorboard_log_name": "tensorboard_controller_test_online",
+    "save_path": "controller_test_online2",
+    "tensorboard_log_name": "tensorboard_controller_test_online2",
     "timesteps": 100_000,
     "action_noise": 0.05,
 }

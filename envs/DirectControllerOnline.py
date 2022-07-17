@@ -166,5 +166,7 @@ class DirectControllerOnline(DirectController):
         ax[1][1].grid()
         ax[1][1].legend()
 
+        rmse_episode = np.mean(np.sqrt(np.square(np.array(self.episode_log["function"]["w"]) - np.array(self.episode_log["function"]["y"]))))
+
         fig.tight_layout()
-        return fig, ax
+        return fig, ax, rmse_episode, None
