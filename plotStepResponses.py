@@ -1,10 +1,8 @@
 import json
-import time
 import numpy as np
-import torch as th
 import os
 
-from envs.DirectControllerSim import DirectControllerSim
+from rl.envs.DirectControllerSim import DirectControllerSim
 from stable_baselines3 import DDPG
 
 start_path = r"C:\AktiveProjekte\Python\Projektmodul2\wandb_observations"

@@ -1,17 +1,15 @@
 import numpy as np
 import torch as th
 import os
-from stable_baselines3 import DDPG, TD3
+from stable_baselines3 import DDPG
 from stable_baselines3.common.callbacks import CallbackList
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.vec_env import SubprocVecEnv
-from stable_baselines3.ddpg.policies import MlpPolicy
 
-from CustomEvalCallback import CustomEvalCallback
-from envs.DirectControllerSim import DirectControllerSim
-import custom_policy
+from rl.CustomEvalCallback import CustomEvalCallback
+from rl.envs.DirectControllerSim import DirectControllerSim
 
 actor_net = [5, 5]
 critic_net = [200, 200]

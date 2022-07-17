@@ -10,10 +10,8 @@ from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from wandb.integration.sb3 import WandbCallback
 
-from CustomEvalCallback import CustomEvalCallback
-from envs.DirectControllerSim import DirectControllerSim
-import custom_policy
-from torch import nn
+from rl.CustomEvalCallback import CustomEvalCallback
+from rl.envs.DirectControllerSim import DirectControllerSim
 
 if __name__ == "__main__":
     hyperparameter_defaults = {

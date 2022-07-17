@@ -1,5 +1,5 @@
 from stable_baselines3 import DDPG
-from envs.DirectControllerSim import DirectControllerSim
+from rl.envs.DirectControllerSim import DirectControllerSim
 import matplotlib.pyplot as plt
 import numpy as np
 import torch as th

@@ -1,17 +1,16 @@
 import numpy as np
 from typing import Callable
-from stable_baselines3.ddpg.policies import MlpPolicy
 from stable_baselines3.common.noise import NormalActionNoise
-from stable_baselines3 import DDPG, TD3
+from stable_baselines3 import DDPG
 from stable_baselines3.common.callbacks import CallbackList
-from CustomEvalCallback import CustomEvalCallback
+from rl.CustomEvalCallback import CustomEvalCallback
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import VecCheckNan, DummyVecEnv
+from stable_baselines3.common.vec_env import VecCheckNan
 from stable_baselines3.common.env_util import make_vec_env
 import torch as th
-from envs.DirectControllerOnlineConnection import DirectControllerOnlineConnection
-from envs.DirectControllerOnline import DirectControllerOnline
-import custom_policy
+from rl.envs.DirectControllerOnlineConnection import DirectControllerOnlineConnection
+from rl.envs.DirectControllerOnline import DirectControllerOnline
+
 
 def linear_schedule(initial_value: float=1e-3) -> Callable[[float], float]:
     """

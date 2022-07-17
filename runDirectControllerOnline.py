@@ -1,6 +1,6 @@
 from stable_baselines3 import DDPG
-from envs.DirectControllerOnlineConnection import DirectControllerOnlineConnection
-from envs.DirectControllerOnline import DirectControllerOnline
+from rl.envs.DirectControllerOnlineConnection import DirectControllerOnlineConnection
+from rl.envs.DirectControllerOnline import DirectControllerOnline
 
 online_connection = DirectControllerOnlineConnection()
 env = DirectControllerOnline(online_connection, output_freq=100)
