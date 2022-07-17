@@ -1,0 +1,20 @@
+command:
+  - venv\Scripts\python.exe
+  - ${program}
+  - ${args}
+program: ergebnisse_chapter_runner\runnerDirectControlSimObservations2WandB.py
+method: grid
+parameters:
+  method:
+    values:
+      - [raw_with_last_states, 3]
+#      - [raw_with_last_states, 4]
+#      - [error_with_last_states, 4]
+#      - [error_with_extra_components, [d, input_vel]]
+#      - [error_with_extra_components, [i, input_vel]]
+#      - [error_with_extra_components, [d, i, input_vel]]
+  bias:
+    values:
+      - true
+      - false
+
