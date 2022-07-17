@@ -16,6 +16,7 @@ class DirectController(gym.Env, abc.ABC):
                  sensor_freq=4000,
                  reward_kwargs=None,
                  observation_kwargs=None,
+                 learn_action_change = True
                  ):
         """
         Create a gym environment that is designed to directly control the actuating value (u) of a system. It is a
@@ -31,6 +32,7 @@ class DirectController(gym.Env, abc.ABC):
 
         self.reward_kwargs = reward_kwargs if reward_kwargs else {}
         self.observation_kwargs = observation_kwargs if observation_kwargs else {}
+        self.learn_action_change = learn_action_change
 
         # set reward function
         reward_function = self.reward_kwargs.get("function", "normal")

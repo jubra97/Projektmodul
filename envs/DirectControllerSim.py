@@ -22,6 +22,7 @@ class DirectControllerSim(DirectController):
                  observation_scale=None,
                  reward_kwargs=None,
                  observation_kwargs=None,
+                 learn_action_change = True,
                  ):
         """
         Create a DirectController with a simulation backend. This class can use the Observation and Reward functions of
@@ -60,6 +61,7 @@ class DirectControllerSim(DirectController):
                          output_freq=output_freq,
                          reward_kwargs=reward_kwargs,
                          observation_kwargs=observation_kwargs,
+                         learn_action_change=learn_action_change
                          )
 
     def custom_reset(self, step_start=None, step_end=None, step_slope=None, custom_w=None):
@@ -151,17 +153,18 @@ class DirectControllerSim(DirectController):
         # use action[0] * 2 to be able to change the action from one extreme to the other.
         # If you want to change the system input from -1 to 1 in one step you need 2 as action.
 
-        # new_action = self.last_u[-1] + np.sqrt(abs(action[0])) * 2 * np.sign(action[0])
-        new_action = self.last_u[-1] + action[0] * 2
-
-        # new_action = action[0]
-        new_action = np.clip(new_action, -1, 1)
-        system_input_trajectory = [new_action] * (self.sim.model_steps_per_controller_update + 1)
-        self.update_simulation(system_input_trajectory)
+        if self.learn_action_change:
+            new_action = self.last_u[-1] + action[0] * 2
+        else:
+            new_action = action[0]
 
         if self.log:
             self.episode_log["action"]["value"].append(new_action)
-            self.episode_log["action"]["change"].append(action[0])
+            self.episode_log["action"]["change"].append(new_action - self.last_u[-1])
+
+        new_action = np.clip(new_action, -1, 1)
+        system_input_trajectory = [new_action] * (self.sim.model_steps_per_controller_update + 1)
+        self.update_simulation(system_input_trajectory)
 
         if self.sim.done:
             done = True

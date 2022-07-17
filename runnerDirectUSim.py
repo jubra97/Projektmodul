@@ -30,8 +30,8 @@ from utils import linear_schedule
 
 # If the function is "error_with_extra_components" you can use an "obs_config" dict to add different options:
 # if no dict is given only the error is used as observation. The dict hast the following options:
-# 'd', 'i', 'input', 'output', 'input_ve', 'output_vel'. For every keyword that is true the corresponding value is added
-# to the observation
+# 'd' -> dot{e}, 'i' -> int{e}, 'input' -> u, 'output' -> y , 'input_vel' -> dot{u}, 'output_vel' -> dot{y}.
+# For every keyword that is true the corresponding value is added to the observation.
 observation_options = {
     # other possible options: "raw_with_vel", "raw_with_last_states",
     # "error_with_vel", "error_with_last_states", "error_with_extra_components"
@@ -39,10 +39,7 @@ observation_options = {
     "average_length": 1,  # use average of last 5 sensor data points
     "obs_config": {
         "d": True,
-        # "i": True,
         "input_vel": True,
-        # 'input': True,
-        # "output_vel": True,
     },
 }
 
@@ -70,6 +67,7 @@ env_options = {
     "observation_kwargs": observation_options,
     "reward_kwargs": reward_options,
     "log": False,  # log false for training envs
+    "learn_action_change": False  # learn only action change or learn absolute action in every step
 }
 
 policy_options = {
