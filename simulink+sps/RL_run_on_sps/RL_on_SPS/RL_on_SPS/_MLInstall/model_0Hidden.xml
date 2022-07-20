@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MLlib_XML_File>
+	<MachineLearningModel modelName="mlp_neural_network" defaultEngine="mlp_fp32_engine">
+		<CustomAttributes />
+		<AuxiliarySpecifications>
+			<PTI str_producer="Beckhoff MLlib" str_producerVersion="3.1.220310.0" str_requiredVersion="3.1.200902.0" />
+		</AuxiliarySpecifications>
+		<Configuration int64_numInputNeurons="3" int64_numLayers="1" bool_usesBias="true">
+			<MlpLayer1 int64_numNeurons="1" str_activationFunction="ACT_FN_TANH" />
+		</Configuration>
+		<Parameters str_engine="mlp_fp32_engine" int64_numLayers="1" bool_usesBias="true">
+			<MlpLayer1 str_type="DENSE" str_activationFunction="ACT_FN_TANH">
+				<WeightMatrix str_type="fp32" int64_rows="1" int64_columns="4">
+					<Row1 arrfp32_vals="0.721345007,8.26679897,9.24376488,0" />
+				</WeightMatrix>
+			</MlpLayer1>
+		</Parameters>
+	</MachineLearningModel>
+</MLlib_XML_File>

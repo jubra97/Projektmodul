@@ -1,0 +1,471 @@
+<?xml version="1.0"?>
+<TcEventSources Version="2">
+	<Source>
+		<GUID>{28111931-0002-0000-5230-351C36232000}</GUID>
+		<Name LcId="1031">EL7221-9014 1K. MDP742 Servo-Motor-Endstufe mit OCT (50V, 8A RMS) und STO Eingang</Name>
+		<Name LcId="1033">EL7221-9014 1Ch. MDP742 Servo motor output stage with OCT (50V, 8A RMS) and STO input</Name>
+		<Event>
+			<Id>1</Id>
+			<Message LcId="1031">kein Fehler</Message>
+			<Message LcId="1033">No error</Message>
+		</Event>
+		<Event>
+			<Id>2</Id>
+			<Message LcId="1031">Kommunikation aufgebaut</Message>
+			<Message LcId="1033">Communication established</Message>
+		</Event>
+		<Event>
+			<Id>4609</Id>
+			<Message LcId="1031">Verbindung zur Feldseite wiederhergestellt</Message>
+			<Message LcId="1033">Communication re-established</Message>
+		</Event>
+		<Event>
+			<Id>16641</Id>
+			<Message LcId="1031">Klemmen-Übertemperatur</Message>
+			<Message LcId="1033">Terminal-Overtemperature</Message>
+		</Event>
+		<Event>
+			<Id>16642</Id>
+			<Message LcId="1031">Diskrepanz in der PDO-Konfiguration</Message>
+			<Message LcId="1033">Discrepancy in the PDO-Configuration</Message>
+		</Event>
+		<Event>
+			<Id>17153</Id>
+			<Message LcId="1031">Feedback-Warnung</Message>
+			<Message LcId="1033">Feedback-Warning</Message>
+		</Event>
+		<Event>
+			<Id>17425</Id>
+			<Message LcId="1031">Unterspannung DC-Zwischenkreis</Message>
+			<Message LcId="1033">DC-Link undervoltage</Message>
+		</Event>
+		<Event>
+			<Id>17426</Id>
+			<Message LcId="1031">Überspannung DC-Zwischenkreis</Message>
+			<Message LcId="1033">DC-Link overvoltage</Message>
+		</Event>
+		<Event>
+			<Id>17427</Id>
+			<Message LcId="1031">I2T-Modell Verstärker Überlast</Message>
+			<Message LcId="1033">I2T Amplifier overload</Message>
+		</Event>
+		<Event>
+			<Id>17428</Id>
+			<Message LcId="1031">I2T-Modell Motor Überlast</Message>
+			<Message LcId="1033">I2T Motor overload</Message>
+		</Event>
+		<Event>
+			<Id>17429</Id>
+			<Message LcId="1031">Geschwindigkeit wird begrenzt</Message>
+			<Message LcId="1033">Speed limitation active</Message>
+		</Event>
+		<Event>
+			<Id>17431</Id>
+			<Message LcId="1031">Motor-Übertemperatur</Message>
+			<Message LcId="1033">Motor-Overtemperature</Message>
+		</Event>
+		<Event>
+			<Id>17432</Id>
+			<Message LcId="1031">Limit: Strom wird limitiert</Message>
+			<Message LcId="1033">Limit: Current</Message>
+		</Event>
+		<Event>
+			<Id>17433</Id>
+			<Message LcId="1031">Limit: Verstärker I2T-Modell übersteigt 100%</Message>
+			<Message LcId="1033">Limit: Amplifier I2T-model exceeds 100%</Message>
+		</Event>
+		<Event>
+			<Id>17434</Id>
+			<Message LcId="1031">Limit: Motor I2T-Modell übersteigt 100%</Message>
+			<Message LcId="1033">Limit: Motor I2T-model exceeds 100%</Message>
+		</Event>
+		<Event>
+			<Id>17435</Id>
+			<Message LcId="1031">Limit: Drehzahl wird limitiert</Message>
+			<Message LcId="1033">Limit: Velocity limitation</Message>
+		</Event>
+		<Event>
+			<Id>17436</Id>
+			<Message LcId="1031">Spannung am STO-/Hardware enable Eingang fehlt</Message>
+			<Message LcId="1033">Voltage on STO-/Hardware enable input missing</Message>
+		</Event>
+		<Event>
+			<Id>17437</Id>
+			<Message LcId="1031">Interner Hardwarefehler</Message>
+			<Message LcId="1033">Internal hardware error</Message>
+		</Event>
+		<Event>
+			<Id>17440</Id>
+			<Message LcId="1031">Cogging Kompensation nicht unterstützt ({0})</Message>
+			<Message LcId="1033">Cogging compensation not supported ({0})</Message>
+		</Event>
+		<Event>
+			<Id>32770</Id>
+			<Message LcId="1031">Kommunikation abgebrochen</Message>
+			<Message LcId="1033">Communication aborted</Message>
+		</Event>
+		<Event>
+			<Id>33026</Id>
+			<Message LcId="1031">Ungültige Kombination von In- und Output PDOs</Message>
+			<Message LcId="1033">Invalid combination of Inputs and Outputs PDOs</Message>
+		</Event>
+		<Event>
+			<Id>33027</Id>
+			<Message LcId="1031">Keine Variablen verknüpft</Message>
+			<Message LcId="1033">No variable linkage</Message>
+		</Event>
+		<Event>
+			<Id>33028</Id>
+			<Message LcId="1031">Klemmen-Übertemperatur</Message>
+			<Message LcId="1033">Terminal-Overtemperature</Message>
+		</Event>
+		<Event>
+			<Id>33029</Id>
+			<Message LcId="1031">PD-Watchdog</Message>
+			<Message LcId="1033">PD-Watchdog</Message>
+		</Event>
+		<Event>
+			<Id>33077</Id>
+			<Message LcId="1031">Zykluszeit muss ein vielfaches von 125 µs sein</Message>
+			<Message LcId="1033">Cycletime has to be a multiple of 125 µs</Message>
+		</Event>
+		<Event>
+			<Id>33079</Id>
+			<Message LcId="1031">Elektronisches Typenschild: CRC-Fehler</Message>
+			<Message LcId="1033">Electronic name plate: CRC error</Message>
+		</Event>
+		<Event>
+			<Id>33094</Id>
+			<Message LcId="1031">Sync-Mode und PDO-Konfiguration sind nicht kompatibel</Message>
+			<Message LcId="1033">Sync-Mode and PDO-Configuration are not compatible</Message>
+		</Event>
+		<Event>
+			<Id>33281</Id>
+			<Message LcId="1031">Keine Kommunikation zur Feldseite ( Hilfsspannung fehlt)</Message>
+			<Message LcId="1033">No communication to field-side (Auxiliary voltage missing)</Message>
+		</Event>
+		<Event>
+			<Id>33538</Id>
+			<Message LcId="1031">Feedback-Fehler</Message>
+			<Message LcId="1033">Feedback-Error</Message>
+		</Event>
+		<Event>
+			<Id>33540</Id>
+			<Message LcId="1031">OCT Kommunikationsfehler</Message>
+			<Message LcId="1033">OCT communication error</Message>
+		</Event>
+		<Event>
+			<Id>33795</Id>
+			<Message LcId="1031">Fehler bei der ADC-Strommessung</Message>
+			<Message LcId="1033">ADC Error</Message>
+		</Event>
+		<Event>
+			<Id>33796</Id>
+			<Message LcId="1031">Überstrom auf Phase U, V oder W</Message>
+			<Message LcId="1033">Overcurrent</Message>
+		</Event>
+		<Event>
+			<Id>33798</Id>
+			<Message LcId="1031">Unterspannung DC-Zwischenkreis</Message>
+			<Message LcId="1033">Undervoltage DC-Link</Message>
+		</Event>
+		<Event>
+			<Id>33799</Id>
+			<Message LcId="1031">Überspannung DC-Zwischenkreis</Message>
+			<Message LcId="1033">Overvoltage DC-Link</Message>
+		</Event>
+		<Event>
+			<Id>33800</Id>
+			<Message LcId="1031">I2T-Modell Verstärker Überlast</Message>
+			<Message LcId="1033">I2T-Model Amplifier overload</Message>
+		</Event>
+		<Event>
+			<Id>33801</Id>
+			<Message LcId="1031">I2T-Modell Motor Überlast</Message>
+			<Message LcId="1033">I2T-Model motor overload</Message>
+		</Event>
+		<Event>
+			<Id>33803</Id>
+			<Message LcId="1031">Motorfehler oder Fehler in der Kommutierung</Message>
+			<Message LcId="1033">Motor error or commutation malfunction</Message>
+		</Event>
+		<Event>
+			<Id>33804</Id>
+			<Message LcId="1031">Phasenfehler</Message>
+			<Message LcId="1033">Phase failure</Message>
+		</Event>
+		<Event>
+			<Id>33814</Id>
+			<Message LcId="1031">Motor-Übertemperatur</Message>
+			<Message LcId="1033">Motor-Overtemperature</Message>
+		</Event>
+		<Event>
+			<Id>33815</Id>
+			<Message LcId="1031">Maximale Drehfeldfrequenz überschritten</Message>
+			<Message LcId="1033">Maximum rotating field velocity exceeded</Message>
+		</Event>
+		<Event>
+			<Id>33820</Id>
+			<Message LcId="1031">STO-/Hardware enable Eingang ist bei aktiver Achse abgefallen</Message>
+			<Message LcId="1033">STO-/Hardware enable input de-energized while the axis was enabled</Message>
+		</Event>
+		<Event>
+			<Id>33821</Id>
+			<Message LcId="1031">Interner Hardwarefehler</Message>
+			<Message LcId="1033">Internal hardware error</Message>
+		</Event>
+		<Event>
+			<Id>33857</Id>
+			<Message LcId="1031">Schleppabstand überschritten</Message>
+			<Message LcId="1033">Following error</Message>
+		</Event>
+		<Event>
+			<Id>33872</Id>
+			<Message LcId="1031">Ungültiger Start-Typ 0x{0,x}</Message>
+			<Message LcId="1033">Invalid start type 0x{0,x}</Message>
+		</Event>
+		<Event>
+			<Id>33873</Id>
+			<Message LcId="1031">Ungültiger Endschalter Zustand</Message>
+			<Message LcId="1033">Invalid limit switch level</Message>
+		</Event>
+		<Event>
+			<Id>33874</Id>
+			<Message LcId="1031">Antriebsfehler während der Positionierung</Message>
+			<Message LcId="1033">Drive error during positioning</Message>
+		</Event>
+		<Event>
+			<Id>33875</Id>
+			<Message LcId="1031">Latch-Einheit wird von mehreren Modulen zeitgleich genutzt</Message>
+			<Message LcId="1033">Latch unit will be used by multiple modules</Message>
+		</Event>
+		<Event>
+			<Id>33876</Id>
+			<Message LcId="1031">Antrieb nicht in Regelung</Message>
+			<Message LcId="1033">Drive not in control</Message>
+		</Event>
+		<Event>
+			<Id>33877</Id>
+			<Message LcId="1031"><![CDATA[Ungültiger Wert für "Target acceleration"]]></Message>
+			<Message LcId="1033"><![CDATA[Invalid value for "Target acceleration"]]></Message>
+		</Event>
+		<Event>
+			<Id>33878</Id>
+			<Message LcId="1031"><![CDATA[Ungültiger Wert für "Target deceleration"]]></Message>
+			<Message LcId="1033"><![CDATA[Invalid value for "Target deceleration"]]></Message>
+		</Event>
+		<Event>
+			<Id>33879</Id>
+			<Message LcId="1031"><![CDATA[Ungültiger Wert für "Target velocity"]]></Message>
+			<Message LcId="1033"><![CDATA[Invalid value for "Target velocity"]]></Message>
+		</Event>
+		<Event>
+			<Id>33880</Id>
+			<Message LcId="1031"><![CDATA[Ungültiger Wert für "Target position"]]></Message>
+			<Message LcId="1033"><![CDATA[Invalid value for "Target position"]]></Message>
+		</Event>
+		<Event>
+			<Id>33881</Id>
+			<Message LcId="1031">Emergency Stop ist aktiv</Message>
+			<Message LcId="1033">Emergency stop active</Message>
+		</Event>
+		<Event>
+			<Id>33882</Id>
+			<Message LcId="1031">Target position ist größer als der Modulofaktor</Message>
+			<Message LcId="1033">Target position exceeds Modulofactor</Message>
+		</Event>
+		<Event>
+			<Id>33883</Id>
+			<Message LcId="1031">Antrieb darf nicht in Regelung sein</Message>
+			<Message LcId="1033">Drive must be disabled</Message>
+		</Event>
+		<Event>
+			<Id>33884</Id>
+			<Message LcId="1031">Kein Feedback gefunden</Message>
+			<Message LcId="1033">No Feedback found</Message>
+		</Event>
+		<Event>
+			<Id>33885</Id>
+			<Message LcId="1031">Ungültiger Modulofaktor</Message>
+			<Message LcId="1033">Modulo factor invalid</Message>
+		</Event>
+		<Event>
+			<Id>33886</Id>
+			<Message LcId="1031">Ungültiges Zeilpositionsfenster</Message>
+			<Message LcId="1033">Invalid target position window</Message>
+		</Event>
+		<Property>
+			<Name>DisplayTxtId</Name>
+			<Value>true</Value>
+		</Property>
+	</Source>
+	<Source>
+		<GUID>{28111931-0002-0000-E98C-215000001200}</GUID>
+		<Name LcId="1031">ELM3502-0000 2K. Messbrückenauswertung (DMS), 24 bit, hochgenau</Name>
+		<Name LcId="1033">ELM3502-0000 2Ch. Bridge Measuring (SG), 24 bit, high precision</Name>
+		<Event>
+			<Id>4359</Id>
+			<Message LcId="1031">Die ausgewählte Funktion kann nicht ausgeführt werden.</Message>
+			<Message LcId="1033">The selected operation is not possible</Message>
+		</Event>
+		<Event>
+			<Id>4360</Id>
+			<Message LcId="1031">Selbsttest erfolgreich durchgeführt. Gerät ist betriebsbereit.</Message>
+			<Message LcId="1033">Selftest completed successfully. Device ready.</Message>
+		</Event>
+		<Event>
+			<Id>4368</Id>
+			<Message LcId="1031">Einstellungen wurden automatisch auf Standardwerte zurückgesetzt</Message>
+			<Message LcId="1033">Settings were reset to default values automatically</Message>
+		</Event>
+		<Event>
+			<Id>5505</Id>
+			<Message LcId="1031">Verdrahtung von Kanal {0} ok.</Message>
+			<Message LcId="1033">Wiring of channel {0} ok.</Message>
+		</Event>
+		<Event>
+			<Id>5893</Id>
+			<Message LcId="1031"><![CDATA[Prozessorauslastung ist wieder im normalen Bereich (< 85%)]]></Message>
+			<Message LcId="1033"><![CDATA[CPU usage returns in normal range (< 85%)]]></Message>
+		</Event>
+		<Event>
+			<Id>5894</Id>
+			<Message LcId="1031">Kanal {0} ist nicht mehr in Sättigung</Message>
+			<Message LcId="1033">Channel {0} is not in saturation anymore</Message>
+		</Event>
+		<Event>
+			<Id>5895</Id>
+			<Message LcId="1031">Kanal {0} ist nicht mehr überlastet</Message>
+			<Message LcId="1033">Channel {0} is not in overload anymore</Message>
+		</Event>
+		<Event>
+			<Id>5898</Id>
+			<Message LcId="1031">Es liegt kein Messbereichsfehler mehr vor (Kanal {0})</Message>
+			<Message LcId="1033">No channel range error anymore (channel {0})</Message>
+		</Event>
+		<Event>
+			<Id>5900</Id>
+			<Message LcId="1031">Abgleichdaten wurden gespeichert</Message>
+			<Message LcId="1033">Calibration data saved</Message>
+		</Event>
+		<Event>
+			<Id>5902</Id>
+			<Message LcId="1031">Gerätetemperatur ist wieder ok</Message>
+			<Message LcId="1033">No overtemperature anymore</Message>
+		</Event>
+		<Event>
+			<Id>16645</Id>
+			<Message LcId="1031">Unterspannung E-Bus Versorgung</Message>
+			<Message LcId="1033">Undervoltage E-Bus supply</Message>
+		</Event>
+		<Event>
+			<Id>16646</Id>
+			<Message LcId="1031">Überspannung E-Bus Versorgung</Message>
+			<Message LcId="1033">Overvoltage E-Bus supply</Message>
+		</Event>
+		<Event>
+			<Id>18190</Id>
+			<Message LcId="1031">Übertemperatur im Gerät</Message>
+			<Message LcId="1033">Overtemperature in device</Message>
+		</Event>
+		<Event>
+			<Id>33032</Id>
+			<Message LcId="1031">Selbsttest wurde mit Fehler abgeschlossen (0x{0,X}{1,X}). Gerät nicht ok.</Message>
+			<Message LcId="1033">Selftest completed with error result (0x{0,X}{1,X}). Device not ok.</Message>
+		</Event>
+		<Event>
+			<Id>33077</Id>
+			<Message LcId="1031"><![CDATA[Zykluszeit zu klein. In der Betriebsart SM Synchron muss die Zykluszeit >= 200µs betragen!]]></Message>
+			<Message LcId="1033"><![CDATA[Cycletime too short. In SM Synchronous mode the cycletime has to be >= 200µs!]]></Message>
+		</Event>
+		<Event>
+			<Id>33821</Id>
+			<Message LcId="1031">Interner Hardwarefehler des Kanals {0}: 0x{1,X}</Message>
+			<Message LcId="1033">Internal hardware error of channel {0}: 0x{1,X}</Message>
+		</Event>
+		<Event>
+			<Id>34177</Id>
+			<Message LcId="1031">Leitungsbruch an Kanal {0} detektiert</Message>
+			<Message LcId="1033">Channel {0} detected a wire break</Message>
+		</Event>
+		<Event>
+			<Id>34178</Id>
+			<Message LcId="1031">Kurzschluss an Kanal {0}</Message>
+			<Message LcId="1033">Short circuit of channel {0}</Message>
+		</Event>
+		<Event>
+			<Id>34560</Id>
+			<Message LcId="1031">Interface von Kanal {0} ist nicht abgeglichen</Message>
+			<Message LcId="1033">Interface of channel {0} is not calibrated</Message>
+		</Event>
+		<Event>
+			<Id>34561</Id>
+			<Message LcId="1031">Betriebslaufzeit wurde manipuliert</Message>
+			<Message LcId="1033">Operatingtime was manipulated</Message>
+		</Event>
+		<Event>
+			<Id>34562</Id>
+			<Message LcId="1031">Oversampling Einstellung des Kanals {0} ist nicht möglich</Message>
+			<Message LcId="1033">Oversampling setting of channel {0} is not possible</Message>
+		</Event>
+		<Event>
+			<Id>34565</Id>
+			<Message LcId="1031"><![CDATA[Prozessorauslastung zu hoch (>= 100%)]]></Message>
+			<Message LcId="1033"><![CDATA[Processor usage to high (>= 100%)]]></Message>
+		</Event>
+		<Event>
+			<Id>34566</Id>
+			<Message LcId="1031">Kanal {0} in Sättigung</Message>
+			<Message LcId="1033">Channel {0} in saturation</Message>
+		</Event>
+		<Event>
+			<Id>34567</Id>
+			<Message LcId="1031">Kanalüberlastung (Kanal {0})</Message>
+			<Message LcId="1033">Channel overload (channel {0})</Message>
+		</Event>
+		<Event>
+			<Id>34568</Id>
+			<Message LcId="1031">Überlastzeit wurde manipuliert (Kanal {0})</Message>
+			<Message LcId="1033">Overloadtime was manipulated (channel {0})</Message>
+		</Event>
+		<Event>
+			<Id>34569</Id>
+			<Message LcId="1031">Sättigungszeit wurde manipuliert (Kanal {0})</Message>
+			<Message LcId="1033">Saturationtime was manipulated (channel {0})</Message>
+		</Event>
+		<Event>
+			<Id>34570</Id>
+			<Message LcId="1031">Messbereichsfehler des Kanals {0}</Message>
+			<Message LcId="1033">Range error of channel {0}</Message>
+		</Event>
+		<Event>
+			<Id>34571</Id>
+			<Message LcId="1031">Kein ADC Takt vorhangen</Message>
+			<Message LcId="1033">No ADC clock</Message>
+		</Event>
+		<Event>
+			<Id>34572</Id>
+			<Message LcId="1031">Übertemperaturzeit wurde manipuliert (Kanal {0})</Message>
+			<Message LcId="1033">Overtemperaturetime was manipulated (channel {0})</Message>
+		</Event>
+		<Event>
+			<Id>34573</Id>
+			<Message LcId="1031">Fehler bei der analogen Spannung: 0x{0,X}</Message>
+			<Message LcId="1033">Error analog voltage supply: 0x{0,X}</Message>
+		</Event>
+		<Event>
+			<Id>34576</Id>
+			<Message LcId="1031">DC Bias Spannung zu niedrig (Kanal {0})</Message>
+			<Message LcId="1033">DC Bias voltage too low (channel {0})</Message>
+		</Event>
+		<Event>
+			<Id>34577</Id>
+			<Message LcId="1031">DC Bias Spannung zu hoch (Kanal {0})</Message>
+			<Message LcId="1033">DC Bias voltage too high (channel {0})</Message>
+		</Event>
+		<Property>
+			<Name>DisplayTxtId</Name>
+			<Value>true</Value>
+		</Property>
+	</Source>
+</TcEventSources>

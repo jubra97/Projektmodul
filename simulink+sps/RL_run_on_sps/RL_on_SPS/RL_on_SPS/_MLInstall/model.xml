@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MLlib_XML_File>
+	<MachineLearningModel modelName="mlp_neural_network" defaultEngine="mlp_fp32_engine">
+		<CustomAttributes />
+		<AuxiliarySpecifications>
+			<PTI str_producer="Beckhoff MLlib" str_producerVersion="3.1.220310.0" str_requiredVersion="3.1.200902.0" />
+		</AuxiliarySpecifications>
+		<Configuration int64_numInputNeurons="3" int64_numLayers="3" bool_usesBias="true">
+			<MlpLayer1 int64_numNeurons="10" str_activationFunction="ACT_FN_TANH" />
+			<MlpLayer2 int64_numNeurons="10" str_activationFunction="ACT_FN_TANH" />
+			<MlpLayer3 int64_numNeurons="1" str_activationFunction="ACT_FN_TANH" />
+		</Configuration>
+		<Parameters str_engine="mlp_fp32_engine" int64_numLayers="3" bool_usesBias="true">
+			<MlpLayer1 str_type="DENSE" str_activationFunction="ACT_FN_TANH">
+				<WeightMatrix str_type="fp32" int64_rows="10" int64_columns="4">
+					<Row1 arrfp32_vals="-0.0083934078,6.80755329,-0.598553061,0" />
+					<Row2 arrfp32_vals="0.00697060768,-10.5324888,2.45604777,0" />
+					<Row3 arrfp32_vals="0.153769508,10.6780033,-0.831972957,0" />
+					<Row4 arrfp32_vals="0.0729818493,10.6225567,-1.60695088,0" />
+					<Row5 arrfp32_vals="-0.0746058971,-10.3244877,1.53108418,0" />
+					<Row6 arrfp32_vals="-0.144887894,-10.1064749,1.08316541,0" />
+					<Row7 arrfp32_vals="-0.832656324,10.6357603,-1.67008579,0" />
+					<Row8 arrfp32_vals="-0.172402114,-10.4787922,0.873339295,0" />
+					<Row9 arrfp32_vals="-0.0748163685,-3.76794553,1.17143941,0" />
+					<Row10 arrfp32_vals="-0.0905399621,9.97508812,-2.64544916,0" />
+				</WeightMatrix>
+			</MlpLayer1>
+			<MlpLayer2 str_type="DENSE" str_activationFunction="ACT_FN_TANH">
+				<WeightMatrix str_type="fp32" int64_rows="10" int64_columns="11">
+					<Row1 arrfp32_vals="-0.12632145,-0.309941053,0.408571064,0.344993621,-0.36923945,-0.284000516,0.276961654,-0.139119714,-0.2607539,0.206056565,0" />
+					<Row2 arrfp32_vals="-0.237372369,0.0642270818,0.501788199,0.291523367,-0.26484105,-0.41141659,0.271738827,-0.343299389,-0.230930448,0.425512373,0" />
+					<Row3 arrfp32_vals="0.161356971,0.275766283,-0.21731618,-0.0575362369,0.291197479,0.507642746,-0.226753563,0.576929808,0.195327848,-0.0344235562,0" />
+					<Row4 arrfp32_vals="0.215518758,0.162562743,-0.327821046,-0.279317737,0.34576267,0.698824704,-0.213344306,0.331041455,-0.0877035111,-0.0815174505,0" />
+					<Row5 arrfp32_vals="0.0711011365,-0.198043972,0.421819866,0.0671581775,-0.135586902,-0.5456689,0.0633833855,-0.240932003,0.331955224,0.399617374,0" />
+					<Row6 arrfp32_vals="0.22134766,0.539007545,-0.503577054,0.0378962494,-0.0532586426,0.263274282,-0.143887028,0.697912753,-0.179575324,-0.233518392,0" />
+					<Row7 arrfp32_vals="0.395455718,-0.499680877,-0.0691188052,0.44546327,-0.40030691,0.0840758085,0.220021278,-0.146149546,0.0135345841,0.608744264,0" />
+					<Row8 arrfp32_vals="0.0589982979,0.395910442,-0.280439705,-0.4481484,0.412512571,0.185157105,-0.410456061,0.314822197,0.563556552,-0.0281855054,0" />
+					<Row9 arrfp32_vals="-0.310619116,0.257040709,0.0281728934,-0.314591408,0.309026033,0.52802366,-0.580029428,0.251142263,0.209614024,-0.48823303,0" />
+					<Row10 arrfp32_vals="-0.280821741,0.166687682,0.207670674,0.125063285,-0.0821511671,-0.297662884,-0.914181173,-0.415868342,-0.212326601,-0.516489029,0" />
+				</WeightMatrix>
+			</MlpLayer2>
+			<MlpLayer3 str_type="DENSE" str_activationFunction="ACT_FN_TANH">
+				<WeightMatrix str_type="fp32" int64_rows="1" int64_columns="11">
+					<Row1 arrfp32_vals="-0.367422819,-0.34646523,0.302946776,0.309204429,-0.266931891,0.374772221,-0.367077798,0.504408419,0.388972312,0.464350909,0" />
+				</WeightMatrix>
+			</MlpLayer3>
+		</Parameters>
+	</MachineLearningModel>
+</MLlib_XML_File>

@@ -4,8 +4,11 @@ import time
 from rl.envs.DirectControllerOnline import DirectControllerOnline
 from rl.envs.DirectControllerOnlineConnection import DirectControllerOnlineConnection
 from stable_baselines3 import DDPG
+import numpy as np
+import torch as th
 
-run_path = r"C:\Users\brandlju\PycharmProjects\Projektmodul\controller_test_online2\0"
+
+run_path = r"C:\Users\brandlju\PycharmProjects\Projektmodul\rl\working_online_agents\12_2Hidden"
 
 if __name__ == "__main__":
     with open(f"{run_path}\\extra_info.json", 'r') as f:
