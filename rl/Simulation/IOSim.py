@@ -1,6 +1,5 @@
 import control
 import numpy as np
-# np.seterr(all='raise')
 import copy
 
 

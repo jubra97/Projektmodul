@@ -1,4 +1,4 @@
-from stable_baselines3.td3.policies import TD3Policy, register_policy, Actor
+from stable_baselines3.td3.policies import TD3Policy, Actor
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.policies import BaseModel
 import gym
